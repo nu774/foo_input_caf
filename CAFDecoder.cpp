@@ -1,0 +1,189 @@
+#include "CAFDecoder.h"
+#include "chanmap.h"
+
+CAFDecoder::CAFDecoder(std::shared_ptr<IStreamReader> &pstream)
+    : m_pstream(pstream),
+      m_chanmask(0)
+{
+    AudioFileID iafid;
+    CHECKCA(AudioFileOpenWithCallbacks(this, staticReadCallback, 0, 
+				       staticSizeCallback, 0, 0,
+				       &iafid));
+    m_iaf.attach(iafid, true);
+#ifndef _DEBUG
+    if (m_iaf.getFileFormat() != FOURCC('c','a','f','f'))
+	throw std::runtime_error("Not a CAF file");
+#endif
+
+    std::vector<AudioFormatListItem> aflist;
+    m_iaf.getFormatList(&aflist);
+    m_iasbd = aflist[0].mASBD;
+#ifndef _DEBUG
+    if (m_iasbd.mFormatID == FOURCC('a','a','c','p'))
+	throw std::runtime_error("HE-AACv2 is not supported");
+#endif
+
+    m_bitrate = m_iaf.getBitrate();
+    m_isCBR = (m_iasbd.mBytesPerPacket != 0);
+    if (!m_isCBR) {
+	uint64_t total_bytes = m_iaf.getAudioDataByteCount();
+	uint64_t packet_count = m_iaf.getAudioDataPacketCount();
+	uint32_t max_packet_size = m_iaf.getMaximumPacketSize();
+	uint64_t upper_bound = max_packet_size * packet_count;
+	uint64_t lower_bound = upper_bound - packet_count;
+	m_isCBR = (lower_bound < total_bytes && total_bytes <= upper_bound);
+    }
+
+    ExtAudioFileRef eaf;
+    CHECKCA(ExtAudioFileWrapAudioFileID(m_iaf, false, &eaf));
+    m_eaf.attach(eaf, true);
+
+    m_length = m_eaf.getFileLengthFrames();
+    m_eaf.getFileChannelLayout(&m_channel_layout);
+
+    m_oasbd = m_iasbd;
+    if (m_iasbd.mFormatID == FOURCC('l','p','c','m')) {
+	m_oasbd.mFormatFlags &= 0xf;
+	if (m_iasbd.mBitsPerChannel & 0x7)
+	    m_oasbd.mFormatFlags |= kAudioFormatFlagIsAlignedHigh;
+	m_oasbd.mFormatFlags &= ~kAudioFormatFlagIsBigEndian;
+	if (m_iasbd.mBitsPerChannel == 8)
+	    m_oasbd.mFormatFlags &= ~kAudioFormatFlagIsSignedInteger;
+    } else {
+	m_oasbd.mFormatID = FOURCC('l','p','c','m');
+	if (m_oasbd.mBitsPerChannel & 0x7)
+	    m_oasbd.mFormatFlags = kAudioFormatFlagIsAlignedHigh;
+	else
+	    m_oasbd.mFormatFlags = kAudioFormatFlagIsPacked;
+	if (decodeToFloat())
+	    m_oasbd.mFormatFlags |= kAudioFormatFlagIsFloat;
+	else
+	    m_oasbd.mFormatFlags |= kAudioFormatFlagIsSignedInteger;
+    }
+    m_oasbd.mBitsPerChannel = getDecodingBitsPerChannel();
+    m_oasbd.mFramesPerPacket = 1;
+    m_oasbd.mBytesPerFrame = m_oasbd.mChannelsPerFrame *
+	((m_oasbd.mBitsPerChannel + 7) >> 3);
+    m_oasbd.mBytesPerPacket = m_oasbd.mBytesPerFrame;
+    m_eaf.setClientDataFormat(m_oasbd);
+}
+
+int CAFDecoder::getBitsPerChannel() const
+{
+    if (m_iasbd.mBitsPerChannel)
+	return m_iasbd.mBitsPerChannel;
+    else if (m_iasbd.mFormatID == FOURCC('a','l','a','c'))
+	return m_oasbd.mBitsPerChannel;
+    else if (m_iasbd.mBytesPerPacket) {
+	return static_cast<double>(m_iasbd.mBytesPerPacket << 3)
+	    / m_iasbd.mChannelsPerFrame / m_iasbd.mFramesPerPacket + .5;
+    }
+    return 0;
+}
+
+void CAFDecoder::retrieveChannelMap()
+{
+    if (!m_channel_layout.get())
+	return;
+    std::vector<char> ichannels, ochannels;
+    chanmap::getChannels(m_channel_layout.get(), &ichannels);
+    if (ichannels.size()) {
+	chanmap::convertFromAppleLayout(ichannels, &ochannels);
+	m_chanmask = chanmap::getChannelMask(ochannels);
+	chanmap::getMappingToUSBOrder(ochannels, &m_chanmap);
+    }
+}
+
+bool CAFDecoder::decodeToFloat() const
+{
+    return m_iasbd.mFormatID == FOURCC('a','a','c',' ') ||
+	   m_iasbd.mFormatID == FOURCC('a','a','c','h') ||
+	   m_iasbd.mFormatID == FOURCC('a','a','c','p') ||
+	   m_iasbd.mFormatID == FOURCC('p','a','a','c') ||
+	   m_iasbd.mFormatID == FOURCC('.','m','p','1') ||
+	   m_iasbd.mFormatID == FOURCC('.','m','p','2') ||
+	   m_iasbd.mFormatID == FOURCC('.','m','p','3') ||
+	   m_iasbd.mFormatID == FOURCC('a','c','-','3') ||
+	   m_iasbd.mFormatID == FOURCC('c','a','c','3') ||
+	   m_iasbd.mFormatID == FOURCC('i','l','b','c');
+}
+
+int CAFDecoder::getDecodingBitsPerChannel() const
+{
+    if (m_iasbd.mFormatID == 'lpcm')
+	return m_iasbd.mBitsPerChannel;
+    else if (m_iasbd.mFormatID == FOURCC('a','l','a','c')) {
+	unsigned tab[] = { 16, 20, 24, 32 };
+	unsigned index = (m_iasbd.mFormatFlags - 1) & 0x3;
+	return tab[index];
+    }
+    else if (decodeToFloat())
+	return 32;
+    else
+	return 16;
+}
+
+OSStatus CAFDecoder::staticReadCallback(void *cookie, SInt64 pos, UInt32 count,
+					void *data, UInt32 *nread)
+{
+    CAFDecoder *self = static_cast<CAFDecoder*>(cookie);
+    return self->readCallback(pos, count, data, nread);
+}
+
+SInt64 CAFDecoder::staticSizeCallback(void *cookie)
+{
+    CAFDecoder *self = static_cast<CAFDecoder*>(cookie);
+    return self->sizeCallback();
+}
+
+OSStatus CAFDecoder::readCallback(SInt64 pos, UInt32 count, void *data,
+				  UInt32 *nread)
+{
+    try {
+	if (m_pstream->seek(pos, SEEK_SET) < 0)
+	    return ioErr;
+	*nread = m_pstream->read(data, count);
+	return *nread < 0 ? ioErr : 0;
+    } catch (...) {
+	return ioErr;
+    }
+}
+
+SInt64 CAFDecoder::sizeCallback()
+{
+    try {
+	return m_pstream->get_size();
+    } catch (...) {
+	return ioErr;
+    }
+}
+
+uint32_t CAFDecoder::readSamples(void *buffer, size_t nsamples)
+{
+    AudioBufferList abl = { 0 };
+    abl.mNumberBuffers = 1;
+    abl.mBuffers[0].mNumberChannels = m_oasbd.mChannelsPerFrame;
+    abl.mBuffers[0].mData = buffer;
+    abl.mBuffers[0].mDataByteSize = nsamples * m_oasbd.mBytesPerPacket;
+
+    UInt32 ns = nsamples;
+    CHECKCA(ExtAudioFileRead(m_eaf, &ns, &abl));
+
+    if (m_chanmap.size()) {
+	uint8_t *bp = reinterpret_cast<uint8_t*>(buffer);
+	uint32_t bpf = m_oasbd.mBytesPerFrame;
+	uint32_t bpc = bpf / m_oasbd.mChannelsPerFrame;
+	uint8_t tmp[256];
+	for (size_t i = 0; i < ns; ++i, bp += bpf) {
+	    std::memcpy(tmp, bp, bpf);
+	    for (size_t j = 0; j < m_chanmap.size(); ++j)
+		std::memcpy(bp, &tmp[bpc * (m_chanmap[j] - 1)], bpc);
+	}
+    }
+    return ns;
+}
+
+void CAFDecoder::seek(int64_t frame_offset)
+{
+    CHECKCA(ExtAudioFileSeek(m_eaf, frame_offset));
+}
