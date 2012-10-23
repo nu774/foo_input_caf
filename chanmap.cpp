@@ -1,5 +1,6 @@
 #include "chanmap.h"
 #include <algorithm>
+#include "AudioFileX.h"
 
 namespace chanmap {
     uint32_t getChannelMask(const std::vector<char>& channels)
@@ -24,112 +25,15 @@ namespace chanmap {
     void getChannels(const AudioChannelLayout *acl, std::vector<char> *res)
     {
 	std::vector<char> channels;
-	uint32_t bitmap = 0;
-	const char *layout = 0;
-
-	switch (acl->mChannelLayoutTag) {
-	case kAudioChannelLayoutTag_UseChannelBitmap:
-	    bitmap = acl->mChannelBitmap; break;
-	case kAudioChannelLayoutTag_UseChannelDescriptions:
-	{
-	    const AudioChannelDescription *desc = acl->mChannelDescriptions;
-	    for (size_t i = 0; i < acl->mNumberChannelDescriptions; ++i)
+	if (acl->mChannelLayoutTag == kAudioChannelLayoutTag_UseChannelBitmap)
+	    getChannels(acl->mChannelBitmap, &channels);
+	else {
+	    std::shared_ptr<AudioChannelLayout> layout;
+	    afutil::getChannelLayoutForTag(acl->mChannelLayoutTag, &layout);
+	    const AudioChannelDescription *desc = layout->mChannelDescriptions;
+	    for (size_t i = 0; i < layout->mNumberChannelDescriptions; ++i)
 		channels.push_back(desc[i].mChannelLabel);
-	    break;
 	}
-	case kAudioChannelLayoutTag_Mono:
-	    layout = "\x03"; break;
-	case kAudioChannelLayoutTag_AC3_1_0_1:
-	    layout = "\x03\x04"; break;
-	case kAudioChannelLayoutTag_Stereo:
-	    layout = "\x01\x02"; break;
-	case kAudioChannelLayoutTag_DVD_4:
-	    layout = "\x01\x02\x04"; break;
-	case kAudioChannelLayoutTag_MPEG_3_0_A:
-	    layout = "\x01\x02\x03"; break;
-	case kAudioChannelLayoutTag_MPEG_3_0_B:
-	    layout = "\x03\x01\x02"; break;
-	case kAudioChannelLayoutTag_AC3_3_0:
-	    layout = "\x01\x03\x02"; break;
-	case kAudioChannelLayoutTag_ITU_2_1:
-	    layout = "\x01\x02\x09"; break;
-	case kAudioChannelLayoutTag_DVD_10:
-	    layout = "\x01\x02\x03\x04"; break;
-	case kAudioChannelLayoutTag_AC3_3_0_1:
-	    layout = "\x01\x03\x02\x04"; break;
-	case kAudioChannelLayoutTag_DVD_5:
-	    layout = "\x01\x02\x04\x09"; break;
-	case kAudioChannelLayoutTag_AC3_2_1_1:
-	    layout = "\x01\x02\x09\x04"; break;
-	case kAudioChannelLayoutTag_Quadraphonic:
-	case kAudioChannelLayoutTag_ITU_2_2:
-	    layout = "\x01\x02\x05\x06"; break;
-	case kAudioChannelLayoutTag_MPEG_4_0_A:
-	    layout = "\x01\x02\x03\x09"; break;
-	case kAudioChannelLayoutTag_MPEG_4_0_B:
-	    layout = "\x03\x01\x02\x09"; break;
-	case kAudioChannelLayoutTag_AC3_3_1:
-	    layout = "\x01\x03\x02\x09"; break;
-	case kAudioChannelLayoutTag_DVD_6:
-	    layout = "\x01\x02\x04\x05\x06"; break;
-	case kAudioChannelLayoutTag_DVD_18:
-	    layout = "\x01\x02\x05\x06\x04"; break;
-	case kAudioChannelLayoutTag_DVD_11:
-	    layout = "\x01\x02\x03\x04\x09"; break;
-	case kAudioChannelLayoutTag_AC3_3_1_1:
-	    layout = "\x01\x03\x02\x09\x04"; break;
-	case kAudioChannelLayoutTag_MPEG_5_0_A:
-	    layout = "\x01\x02\x03\x05\x06"; break;
-	case kAudioChannelLayoutTag_MPEG_5_0_B:
-	    layout = "\x01\x02\x05\x06\x03"; break;
-	case kAudioChannelLayoutTag_MPEG_5_0_C:
-	    layout = "\x01\x03\x02\x05\x06"; break;
-	case kAudioChannelLayoutTag_MPEG_5_0_D:
-	    layout = "\x03\x01\x02\x05\x06"; break;
-	case kAudioChannelLayoutTag_MPEG_5_1_A:
-	    layout = "\x01\x02\x03\x04\x05\x06"; break;
-	case kAudioChannelLayoutTag_MPEG_5_1_B:
-	    layout = "\x01\x02\x05\x06\x03\x04"; break;
-	case kAudioChannelLayoutTag_MPEG_5_1_C:
-	    layout = "\x01\x03\x02\x05\x06\x04"; break;
-	case kAudioChannelLayoutTag_MPEG_5_1_D:
-	    layout = "\x03\x01\x02\x05\x06\x04"; break;
-	case kAudioChannelLayoutTag_Hexagonal:
-	case kAudioChannelLayoutTag_AudioUnit_6_0:
-	    layout = "\x01\x02\x05\x06\x03\x09"; break;
-	case kAudioChannelLayoutTag_AAC_6_0:
-	    layout = "\x03\x01\x02\x05\x06\x09"; break;
-	case kAudioChannelLayoutTag_MPEG_6_1_A:
-	    layout = "\x01\x02\x03\x04\x05\x06\x09"; break;
-	case kAudioChannelLayoutTag_AAC_6_1:
-	    layout = "\x03\x01\x02\x05\x06\x09\x04"; break;
-	case kAudioChannelLayoutTag_AudioUnit_7_0:
-	    layout = "\x01\x02\x05\x06\x03\x21\x22"; break;
-	case kAudioChannelLayoutTag_AudioUnit_7_0_Front:
-	    layout = "\x01\x02\x05\x06\x03\x07\x08"; break;
-	case kAudioChannelLayoutTag_AAC_7_0:
-	    layout = "\x03\x01\x02\x05\x06\x21\x22"; break;
-	case kAudioChannelLayoutTag_MPEG_7_1_A:
-	    layout = "\x01\x02\x03\x04\x05\x06\x07\x08"; break;
-	case kAudioChannelLayoutTag_MPEG_7_1_B:
-	    layout = "\x03\x07\x08\x01\x02\x05\x06\x04"; break;
-	case kAudioChannelLayoutTag_MPEG_7_1_C:
-	    layout = "\x01\x02\x03\x04\x05\x06\x21\x22"; break;
-	case kAudioChannelLayoutTag_Emagic_Default_7_1:
-	    layout = "\x01\x02\x05\x06\x03\x04\x07\x08"; break;
-	case kAudioChannelLayoutTag_Octagonal:
-	    layout = "\x01\x02\x05\x06\x03\x09\x21\x22"; break;
-	case kAudioChannelLayoutTag_AAC_Octagonal:
-	    layout = "\x03\x01\x02\x05\x06\x21\x22\x09"; break;
-	default:
-	    throw std::runtime_error("Unsupported channel layout");
-	}
-
-	if (bitmap)
-	    getChannels(bitmap, &channels);
-	else if (layout)
-	    while (*layout) channels.push_back(*layout++);
-
 	res->swap(channels);
     }
     void convertFromAppleLayout(const std::vector<char> &from,

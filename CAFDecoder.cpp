@@ -39,7 +39,9 @@ CAFDecoder::CAFDecoder(std::shared_ptr<IStreamReader> &pstream)
     m_eaf.attach(eaf, true);
 
     m_length = m_eaf.getFileLengthFrames();
-    m_eaf.getFileChannelLayout(&m_channel_layout);
+    //m_eaf.getFileChannelLayout(&m_channel_layout);
+    m_iaf.getChannelLayout(&m_channel_layout);
+    retrieveChannelMap();
 
     m_oasbd = m_iasbd;
     if (m_iasbd.mFormatID == FOURCC('l','p','c','m')) {
@@ -91,6 +93,8 @@ void CAFDecoder::retrieveChannelMap()
 	chanmap::convertFromAppleLayout(ichannels, &ochannels);
 	m_chanmask = chanmap::getChannelMask(ochannels);
 	chanmap::getMappingToUSBOrder(ochannels, &m_chanmap);
+	for (size_t i = 0; i < m_chanmap.size(); ++i)
+	    m_chanmap[i] -= 1;
     }
 }
 
@@ -173,11 +177,11 @@ uint32_t CAFDecoder::readSamples(void *buffer, size_t nsamples)
 	uint8_t *bp = reinterpret_cast<uint8_t*>(buffer);
 	uint32_t bpf = m_oasbd.mBytesPerFrame;
 	uint32_t bpc = bpf / m_oasbd.mChannelsPerFrame;
-	uint8_t tmp[256];
+	uint8_t tmp[256]; // XXX: maximum: 64bit double, 32 channel
 	for (size_t i = 0; i < ns; ++i, bp += bpf) {
 	    std::memcpy(tmp, bp, bpf);
 	    for (size_t j = 0; j < m_chanmap.size(); ++j)
-		std::memcpy(bp, &tmp[bpc * (m_chanmap[j] - 1)], bpc);
+		std::memcpy(&bp[bpc * j], &tmp[bpc * m_chanmap[j]], bpc);
 	}
     }
     return ns;

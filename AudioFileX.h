@@ -157,6 +157,18 @@ namespace afutil {
 	CFDictionaryPtr dp(dref, CFRelease);
 	dict->swap(dp);
     }
+    inline void getChannelLayoutForTag(uint32_t tag,
+				       std::shared_ptr<AudioChannelLayout> *p)
+    {
+	UInt32 k = kAudioFormatProperty_ChannelLayoutForTag;
+	UInt32 size;
+	CHECKCA(AudioFormatGetPropertyInfo(k, sizeof(tag), &tag, &size));
+	std::shared_ptr<AudioChannelLayout>
+	    acl(reinterpret_cast<AudioChannelLayout*>(std::malloc(size)),
+		std::free);
+	CHECKCA(AudioFormatGetProperty(k, sizeof(tag), &tag, &size, acl.get()));
+	p->swap(acl);
+    }
 }
 
 class AudioFileX {
