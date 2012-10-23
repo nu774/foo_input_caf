@@ -27,11 +27,11 @@ static const char *get_codec_name(uint32_t fcc)
     case FOURCC('Q','c','l','q'):
 	return "Qualcomm QCELP";
     case FOURCC('a','a','c',' '):
-	return "AAC / LC";
+	return "AAC";
     case FOURCC('a','a','c','h'):
-	return "AAC / HE";
+	return "AAC";
     case FOURCC('a','a','c','p'):
-	return "AAC / HEv2";
+	return "AAC";
     case FOURCC('a','l','a','c'):
 	return "ALAC";
     case FOURCC('a','l','a','w'):
@@ -47,7 +47,7 @@ static const char *get_codec_name(uint32_t fcc)
     case FOURCC('m','s','\000','\002'):
 	return "MS ADPCM";
     case FOURCC('m','s','\000','\021'):
-	return "MS DVI";
+	return "DVI/IMA ADPCM";
     case FOURCC('m','s','\000','1'):
 	return "MS GSM 6.10";
     case FOURCC('p','a','a','c'):
@@ -55,7 +55,7 @@ static const char *get_codec_name(uint32_t fcc)
     case FOURCC('s','a','m','r'):
 	return "AMR-NB";
     case FOURCC('u','l','a','w'):
-	return "u-Law";
+	return "\xc2""\xb5""-Law";
     }
     return 0;
 }
@@ -103,6 +103,16 @@ public:
 	const char *codec = get_codec_name(asbd.mFormatID);
 	if (codec)
 	    pinfo.info_set("codec", codec);
+	if (asbd.mFormatID == FOURCC('a','a','c',' '))
+	    pinfo.info_set("codec_profile", "LC");
+	else if (asbd.mFormatID == FOURCC('a','a','c','h'))
+	    pinfo.info_set("codec_profile", "SBR");
+	else if (asbd.mFormatID == FOURCC('a','a','c','p'))
+	    pinfo.info_set("codec_profile", "SBR+PS");
+	else if (asbd.mFormatID == FOURCC('.','m','p','3')) {
+	    pinfo.info_set("codec_profile",
+		m_decoder->isCBR() ? "CBR" : "VBR");
+	}
     }
     t_filestats get_file_stats(abort_callback &abort)
     {

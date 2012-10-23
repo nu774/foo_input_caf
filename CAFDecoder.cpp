@@ -39,8 +39,12 @@ CAFDecoder::CAFDecoder(std::shared_ptr<IStreamReader> &pstream)
     m_eaf.attach(eaf, true);
 
     m_length = m_eaf.getFileLengthFrames();
-    //m_eaf.getFileChannelLayout(&m_channel_layout);
-    m_iaf.getChannelLayout(&m_channel_layout);
+    try {
+	m_iaf.getChannelLayout(&m_channel_layout);
+    } catch (CoreAudioException &e) {
+	if (!e.isNotSupportedError())
+	    throw;
+    }
     retrieveChannelMap();
 
     m_oasbd = m_iasbd;
