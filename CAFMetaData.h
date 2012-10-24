@@ -35,3 +35,8 @@ private:
     uint64_t nextChunk(char *name);
     void readInfoChunk();
 };
+
+namespace meta_from_fb2k {
+    void convertToInfoDictionary(const file_info &pinfo,
+				 CFDictionaryPtr *result);
+}

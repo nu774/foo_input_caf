@@ -6,9 +6,17 @@ CAFDecoder::CAFDecoder(std::shared_ptr<IStreamReader> &pstream)
       m_chanmask(0)
 {
     AudioFileID iafid;
-    CHECKCA(AudioFileOpenWithCallbacks(this, staticReadCallback, 0, 
-				       staticSizeCallback, 0, 0,
-				       &iafid));
+    m_pwriter = dynamic_cast<IStreamWriter*>(m_pstream.get());
+    if (m_pwriter)
+	CHECKCA(AudioFileOpenWithCallbacks(this, staticReadCallback,
+					   staticWriteCallback,
+					   staticSizeCallback,
+					   staticTruncateCallback,
+					   0, &iafid));
+    else
+	CHECKCA(AudioFileOpenWithCallbacks(this, staticReadCallback, 0, 
+					   staticSizeCallback, 0, 0,
+					   &iafid));
     m_iaf.attach(iafid, true);
 #ifndef _DEBUG
     if (m_iaf.getFileFormat() != FOURCC('c','a','f','f'))
@@ -131,27 +139,17 @@ int CAFDecoder::getDecodingBitsPerChannel() const
 	return 16;
 }
 
-OSStatus CAFDecoder::staticReadCallback(void *cookie, SInt64 pos, UInt32 count,
-					void *data, UInt32 *nread)
-{
-    CAFDecoder *self = static_cast<CAFDecoder*>(cookie);
-    return self->readCallback(pos, count, data, nread);
-}
-
-SInt64 CAFDecoder::staticSizeCallback(void *cookie)
-{
-    CAFDecoder *self = static_cast<CAFDecoder*>(cookie);
-    return self->sizeCallback();
-}
-
 OSStatus CAFDecoder::readCallback(SInt64 pos, UInt32 count, void *data,
 				  UInt32 *nread)
 {
     try {
 	if (m_pstream->seek(pos, SEEK_SET) < 0)
 	    return ioErr;
-	*nread = m_pstream->read(data, count);
-	return *nread < 0 ? ioErr : 0;
+	ssize_t n = m_pstream->read(data, count);
+	if (n < 0)
+	    return ioErr;
+	*nread = n;
+	return 0;
     } catch (...) {
 	return ioErr;
     }
@@ -160,7 +158,33 @@ OSStatus CAFDecoder::readCallback(SInt64 pos, UInt32 count, void *data,
 SInt64 CAFDecoder::sizeCallback()
 {
     try {
-	return m_pstream->get_size();
+	int64_t size = m_pstream->get_size();
+	return size < 0 ? ioErr : size;
+    } catch (...) {
+	return ioErr;
+    }
+}
+
+OSStatus CAFDecoder::writeCallback(SInt64 pos, UInt32 count, const void *data,
+				   UInt32 *nwritten)
+{
+    try {
+	if (m_pwriter->seek(pos, SEEK_SET) < 0)
+	    return ioErr;
+	ssize_t n = m_pwriter->write(data, count);
+	if (n < 0)
+	    return ioErr;
+	*nwritten = n;
+	return 0;
+    } catch (...) {
+	return ioErr;
+    }
+}
+
+OSStatus CAFDecoder::truncateCallback(SInt64 size)
+{
+    try {
+	return m_pwriter->set_size(size) < 0 ? ioErr : 0;
     } catch (...) {
 	return ioErr;
     }

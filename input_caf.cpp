@@ -74,8 +74,10 @@ public:
     {
 	if (g_CoreAudioToolboxVersion.empty())
 	    throw pfc::exception("CoreAudioToolbox.dll not found");
+	/*
 	if (reason == input_open_info_write)
 	    throw exception_io_unsupported_format();
+	*/
 	m_pfile = pfile;
 	input_open_file_helper(m_pfile, path, reason, abort);
 	m_pfile->ensure_seekable();
@@ -187,7 +189,10 @@ public:
     }
     void retag(const file_info &info, abort_callback &abort)
     {
-	throw exception_io_unsupported_format();
+	create_decoder();
+	CFDictionaryPtr dict;
+	meta_from_fb2k::convertToInfoDictionary(info, &dict);
+	m_decoder->setInfoDictionary(dict.get());
     }
     static bool g_is_our_content_type(const char *content_type)
     {

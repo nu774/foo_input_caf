@@ -3,6 +3,7 @@
 
 #include <cwchar>
 #include <string>
+#include <vector>
 #include <locale>
 #include <stdexcept>
 #include <algorithm>
@@ -79,6 +80,28 @@ namespace strutil {
 	std::locale loc("");
 	return w2m(src, std::use_facet<cvt_t>(loc));
     }
+
+    class Tokenizer {
+	std::vector<char> m_buffer;
+	const char *m_sep;
+	char *m_tok;
+    public:
+	Tokenizer(const std::string &s, const char *sep)
+	    : m_sep(sep)
+	{
+	    m_buffer.resize(s.size() + 1);
+	    std::memcpy(&m_buffer[0], s.data(), m_buffer.size() - 1);
+	    m_tok = &m_buffer[0];
+	}
+	char *next()
+	{
+	    return strsep(&m_tok, m_sep);
+	}
+	char *rest()
+	{
+	    return m_tok;
+	}
+    };
 }
 
 #endif

@@ -17,6 +17,12 @@
 #define fseeko _fseeki64
 
 namespace util {
+    template <typename T, size_t size>
+    inline size_t sizeof_array(const T (&)[size])
+    {
+	return size;
+    }
+
     inline uint32_t b2host32(uint32_t n)
     {
 	return _byteswap_ulong(n);

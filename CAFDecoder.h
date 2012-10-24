@@ -16,7 +16,14 @@ public:
     virtual int64_t get_size() = 0;
 };
 
+class IStreamWriter: public IStreamReader {
+public:
+    virtual ssize_t write(const void *buffer, size_t n) = 0;
+    virtual int set_size(int64_t n) = 0;
+};
+
 class CAFDecoder {
+protected:
     enum { ioErr = -36 };
     AudioFileX m_iaf;
     ExtAudioFileX m_eaf;
@@ -27,8 +34,8 @@ class CAFDecoder {
     AudioStreamBasicDescription m_iasbd, m_oasbd;
     std::shared_ptr<AudioChannelLayout> m_channel_layout;
     std::vector<uint32_t> m_chanmap;
-protected:
     std::shared_ptr<IStreamReader> m_pstream;
+    IStreamWriter *m_pwriter;
 public:
     CAFDecoder(std::shared_ptr<IStreamReader> &pstream);
     uint64_t getLength() const
@@ -71,14 +78,48 @@ public:
     {
 	return m_iaf.getPacketToByte(packet);
     }
+    void setInfoDictionary(CFDictionaryRef dict)
+    {
+	if (m_pwriter)
+	    m_iaf.setInfoDictionary(dict);
+	else
+	    throw std::runtime_error("CAFDecoder: not opened for writing");
+    }
 private:
     void retrieveChannelMap();
     bool decodeToFloat() const;
     int getDecodingBitsPerChannel() const;
-    static OSStatus staticReadCallback(void *cookie, SInt64 pos, UInt32 count,
-				       void *data, UInt32 *nread);
-    static SInt64 staticSizeCallback(void *cookie);
+
+    static
+    OSStatus staticReadCallback(void *cookie, SInt64 pos, UInt32 count,
+				void *data, UInt32 *nread)
+    {
+	CAFDecoder *self = static_cast<CAFDecoder*>(cookie);
+	return self->readCallback(pos, count, data, nread);
+    }
+    static
+    SInt64 staticSizeCallback(void *cookie)
+    {
+	CAFDecoder *self = static_cast<CAFDecoder*>(cookie);
+	return self->sizeCallback();
+    }
+    static
+    OSStatus staticWriteCallback(void *cookie, SInt64 pos, UInt32 count,
+				 const void *data, UInt32 *nwritten)
+    {
+	CAFDecoder *self = static_cast<CAFDecoder*>(cookie);
+	return self->writeCallback(pos, count, data, nwritten);
+    }
+    static
+    OSStatus staticTruncateCallback(void *cookie, SInt64 size)
+    {
+	CAFDecoder *self = static_cast<CAFDecoder*>(cookie);
+	return self->truncateCallback(size);
+    }
+
     OSStatus readCallback(SInt64 pos, UInt32 count, void *data, UInt32 *nread);
     SInt64 sizeCallback();
+    OSStatus writeCallback(SInt64 pos, UInt32 count, const void *data,
+			   UInt32 *nwritten);
+    OSStatus truncateCallback(SInt64 size);
 };
-

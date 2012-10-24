@@ -56,8 +56,8 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>lib;..\shared</AdditionalLibraryDirectories>
-      <AdditionalDependencies>user32.lib;advapi32.lib;shlwapi.lib;CoreAudioToolbox.lib;shared.lib</AdditionalDependencies>
-      <DelayLoadDLLs>CoreAudioToolbox.dll</DelayLoadDLLs>
+      <AdditionalDependencies>user32.lib;advapi32.lib;shlwapi.lib;CoreAudioToolbox.lib;CoreFoundation.lib;shared.lib</AdditionalDependencies>
+      <DelayLoadDLLs>CoreAudioToolbox.dll;CoreFoundation.dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -77,8 +77,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>lib;..\shared</AdditionalLibraryDirectories>
-      <AdditionalDependencies>user32.lib;advapi32.lib;shlwapi.lib;CoreAudioToolbox.lib;shared.lib</AdditionalDependencies>
-      <DelayLoadDLLs>CoreAudioToolbox.dll</DelayLoadDLLs>
+      <AdditionalDependencies>user32.lib;advapi32.lib;shlwapi.lib;CoreAudioToolbox.lib;CoreFoundation.lib;shared.lib</AdditionalDependencies>
+      <DelayLoadDLLs>CoreAudioToolbox.dll;CoreFoundation.dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
