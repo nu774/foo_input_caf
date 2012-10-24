@@ -25,15 +25,23 @@ namespace chanmap {
     void getChannels(const AudioChannelLayout *acl, std::vector<char> *res)
     {
 	std::vector<char> channels;
-	if (acl->mChannelLayoutTag == kAudioChannelLayoutTag_UseChannelBitmap)
+	std::shared_ptr<AudioChannelLayout> layout;
+
+	switch (acl->mChannelLayoutTag) {
+	case kAudioChannelLayoutTag_UseChannelBitmap:
 	    getChannels(acl->mChannelBitmap, &channels);
-	else {
-	    std::shared_ptr<AudioChannelLayout> layout;
+	    res->swap(channels);
+	    return;
+	case kAudioChannelLayoutTag_UseChannelDescriptions:
+	    break;
+	default:
 	    afutil::getChannelLayoutForTag(acl->mChannelLayoutTag, &layout);
-	    const AudioChannelDescription *desc = layout->mChannelDescriptions;
-	    for (size_t i = 0; i < layout->mNumberChannelDescriptions; ++i)
-		channels.push_back(desc[i].mChannelLabel);
+	    acl = layout.get();
+	    break;
 	}
+	const AudioChannelDescription *desc = acl->mChannelDescriptions;
+	for (size_t i = 0; i < acl->mNumberChannelDescriptions; ++i)
+	    channels.push_back(desc[i].mChannelLabel);
 	res->swap(channels);
     }
     void convertFromAppleLayout(const std::vector<char> &from,
