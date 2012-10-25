@@ -91,7 +91,7 @@ public:
 	meta.getInfo(pinfo);
 
 	const AudioStreamBasicDescription &asbd = m_decoder->getInputFormat();
-	pinfo.set_length(m_decoder->getLength() / asbd.mSampleRate + 0.5);
+	pinfo.set_length(m_decoder->getLength() / asbd.mSampleRate);
 	pinfo.info_set_bitrate(m_decoder->getBitrate());
 	pinfo.info_set_int("samplerate", asbd.mSampleRate);
 	pinfo.info_set_int("channels", asbd.mChannelsPerFrame);
@@ -212,9 +212,7 @@ private:
 	m_decoder.swap(decoder);
 	initialize_buffer();
 
-	AudioFilePacketTableInfo ptinfo = { 0 };
-	m_decoder->getPacketTableInfo(&ptinfo);
-	m_encoder_delay = m_current_frame = ptinfo.mPrimingFrames;
+	m_encoder_delay = m_decoder->getEncoderDelay();
 	const AudioStreamBasicDescription &asbd = m_decoder->getInputFormat();
 	m_vbr_helper.reset();
     }
@@ -247,12 +245,4 @@ private:
 };
 
 static input_singletrack_factory_t<input_caf> g_input_caf_factory;
-DECLARE_FILE_TYPE("CAF files","*.CAF");
-
-DECLARE_COMPONENT_VERSION(
-    "CAF Decoder",
-    "0.0.1",
-    "CAF decoder based on CoreAudioToolbox.dll"
-);
-VALIDATE_COMPONENT_FILENAME("foo_input_caf.dll");
-
+#include "input_caf.h"

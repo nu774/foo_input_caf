@@ -5,6 +5,9 @@ CAFDecoder::CAFDecoder(std::shared_ptr<IStreamReader> &pstream)
     : m_pstream(pstream),
       m_chanmask(0)
 {
+    m_encoder_delay = 0;
+    std::memset(&m_ptinfo, 0, sizeof m_ptinfo);
+
     AudioFileID iafid;
     m_pwriter = dynamic_cast<IStreamWriter*>(m_pstream.get());
     if (m_pwriter)
@@ -46,7 +49,23 @@ CAFDecoder::CAFDecoder(std::shared_ptr<IStreamReader> &pstream)
     CHECKCA(ExtAudioFileWrapAudioFileID(m_iaf, false, &eaf));
     m_eaf.attach(eaf, true);
 
-    m_length = m_eaf.getFileLengthFrames();
+    m_length = m_iaf.getAudioDataPacketCount() * m_iasbd.mFramesPerPacket;
+    try {
+	m_iaf.getPacketTableInfo(&m_ptinfo);
+	int64_t total =
+	    m_ptinfo.mNumberValidFrames + m_ptinfo.mPrimingFrames +
+	    m_ptinfo.mRemainderFrames;
+	if (total == m_length) {
+	    m_length = m_ptinfo.mNumberValidFrames;
+	    m_encoder_delay = m_ptinfo.mPrimingFrames;
+	} else if (total == m_length / 2) {
+	    m_length = m_ptinfo.mNumberValidFrames * 2;
+	    m_encoder_delay = m_ptinfo.mPrimingFrames * 2;
+	}
+    } catch (CoreAudioException &e) {
+	if (!e.isNotSupportedError())
+	    throw;
+    }
     try {
 	m_iaf.getChannelLayout(&m_channel_layout);
     } catch (CoreAudioException &e) {

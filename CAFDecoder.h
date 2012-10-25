@@ -30,8 +30,10 @@ protected:
     bool m_isCBR;
     int32_t m_bitrate;
     uint32_t m_chanmask;
+    int32_t m_encoder_delay;
     int64_t m_length;
     AudioStreamBasicDescription m_iasbd, m_oasbd;
+    AudioFilePacketTableInfo m_ptinfo;
     std::shared_ptr<AudioChannelLayout> m_channel_layout;
     std::vector<uint32_t> m_chanmap;
     std::shared_ptr<IStreamReader> m_pstream;
@@ -67,12 +69,16 @@ public:
     {
 	return m_isCBR;
     }
+    int getEncoderDelay() const
+    {
+	return m_encoder_delay;
+    }
     int getBitsPerChannel() const;
     uint32_t readSamples(void *buffer, size_t nsamples);
     void seek(int64_t frame_offset);
     void getPacketTableInfo(AudioFilePacketTableInfo *info)
     {
-	m_iaf.getPacketTableInfo(info);
+	*info = m_ptinfo;
     }
     uint64_t getByteOffset(uint64_t packet)
     {
