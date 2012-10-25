@@ -13,7 +13,7 @@ static const char *get_codec_name(uint32_t fcc)
 {
     switch (fcc) {
     case FOURCC('.','m','p','1'):
-	return "MP3";
+	return "MP1";
     case FOURCC('.','m','p','2'):
 	return "MP2";
     case FOURCC('.','m','p','3'):
