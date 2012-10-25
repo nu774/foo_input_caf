@@ -5,6 +5,11 @@
 namespace chanmap {
     uint32_t getChannelMask(const std::vector<char>& channels)
     {
+	if (channels.size() == 1) {
+	    // kAudioChannelLabel_Mono(42) might be used.
+	    // As a channel mask, we always use center(3) for mono.
+	    return 1 << (3 - 1);
+	}
 	uint32_t result = 0;
 	for (size_t i = 0; i < channels.size(); ++i) {
 	    if (channels[i] >= 33)
@@ -47,8 +52,8 @@ namespace chanmap {
     void convertFromAppleLayout(const std::vector<char> &from,
 				std::vector<char> *to)
     {
-	struct F {
-	    static bool test(char x) { return x == 33 || x == 34; }
+	struct RearSurround {
+	    static bool exists(char x) { return x == 33 || x == 34; }
 	    static char trans(char x) {
 		switch (x) {
 		case 5: return 10;
@@ -59,13 +64,14 @@ namespace chanmap {
 		return x;
 	    }
 	};
-	bool has_rear =
-	    std::find_if(from.begin(), from.end(), F::test) != from.end();
+	bool has_rear = std::find_if(from.begin(), from.end(),
+				     RearSurround::exists) != from.end();
 	std::vector<char> result(from.size());
 	if (!has_rear)
 	    std::copy(from.begin(), from.end(), result.begin());
 	else
-	    std::transform(from.begin(), from.end(), result.begin(), F::trans);
+	    std::transform(from.begin(), from.end(), result.begin(),
+			   RearSurround::trans);
 	to->swap(result);
     }
 

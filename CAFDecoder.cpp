@@ -99,15 +99,17 @@ void CAFDecoder::retrieveChannelMap()
 {
     if (!m_channel_layout.get())
 	return;
-    std::vector<char> ichannels, ochannels;
-    chanmap::getChannels(m_channel_layout.get(), &ichannels);
-    if (ichannels.size()) {
-	chanmap::convertFromAppleLayout(ichannels, &ochannels);
-	m_chanmask = chanmap::getChannelMask(ochannels);
-	chanmap::getMappingToUSBOrder(ochannels, &m_chanmap);
-	for (size_t i = 0; i < m_chanmap.size(); ++i)
-	    m_chanmap[i] -= 1;
-    }
+    try {
+	std::vector<char> ichannels, ochannels;
+	chanmap::getChannels(m_channel_layout.get(), &ichannels);
+	if (ichannels.size()) {
+	    chanmap::convertFromAppleLayout(ichannels, &ochannels);
+	    m_chanmask = chanmap::getChannelMask(ochannels);
+	    chanmap::getMappingToUSBOrder(ochannels, &m_chanmap);
+	    for (size_t i = 0; i < m_chanmap.size(); ++i)
+		m_chanmap[i] -= 1;
+	}
+    } catch (...) {}
 }
 
 bool CAFDecoder::decodeToFloat() const

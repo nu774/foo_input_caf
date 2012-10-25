@@ -137,15 +137,24 @@ namespace afutil {
 	result->swap(vec);
     }
     inline std::wstring
-	getASBDFormatName(const AudioStreamBasicDescription *asbd)
+	getASBDFormatName(const AudioStreamBasicDescription &asbd)
     {
 	CFStringRef s;
 	UInt32 size = sizeof(s);
 	CHECKCA(AudioFormatGetProperty(kAudioFormatProperty_FormatName,
-				       sizeof(*asbd), asbd,
+				       sizeof(asbd), &asbd,
 				       &size, &s));
 	CFStringPtr _(s, CFRelease);
-	return CF2W(s);
+	std::wstring ws = CF2W(s);
+	// XXX
+	// Workaround for CoreAudio bug. MPEG Layer 1 and 2 is reported as
+	// Layer 3
+	if (asbd.mFormatID == '.mp1' || asbd.mFormatID == '.mp2') {
+	    const wchar_t *p;
+	    if ((p = std::wcsstr(ws.c_str(), L"Layer 3")) != 0)
+		ws[p - ws.c_str() + 6] = asbd.mFormatID & 0xff;
+	}
+	return ws;
     }
     inline void id3TagToDictinary(const void *data, size_t size,
 				  CFDictionaryPtr *dict)
