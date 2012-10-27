@@ -161,6 +161,11 @@ public:
 	m_current_frame += nframes;
 	return true;
     }
+    bool decode_run_raw(audio_chunk &chunk, mem_block_container &raw,
+			abort_callback & p_abort)
+    {
+	throw pfc::exception_not_implemented();
+    }
     void decode_seek(double seconds, abort_callback &abort)
     {
 	const AudioStreamBasicDescription &asbd = m_decoder->getInputFormat();
@@ -201,6 +206,9 @@ public:
     static bool g_is_our_path(const char *path, const char *ext)
     {
 	return !_stricmp(ext, "caf");
+    }
+    void set_logger(event_logger::ptr ptr)
+    {
     }
 private:
     void create_decoder()
@@ -244,5 +252,5 @@ private:
     }
 };
 
-static input_singletrack_factory_t<input_caf> g_input_caf_factory;
+static input_cuesheet_factory_t<input_caf> g_input_caf_factory;
 #include "input_caf.h"

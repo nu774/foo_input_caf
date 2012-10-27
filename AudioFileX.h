@@ -1,75 +1,18 @@
 #ifndef AudioFileX_H
 #define AudioFileX_H
 
-#include <string>
-#include <vector>
-#include <memory>
-#include <sstream>
-#include <stdexcept>
-#include <stdint.h>
-#define NOMINMAX
-#include <windows.h>
-#include <shlwapi.h>
 #include "CoreAudio/AudioFile.h"
 #include "CoreAudio/AudioFormat.h"
 #include "strutil.h"
-
-#define FOURCC(a,b,c,d) (((a)<<24)|((b)<<16)|((c)<<8)|(d))
-
-typedef std::shared_ptr<const __CFString> CFStringPtr;
-typedef std::shared_ptr<const __CFDictionary> CFDictionaryPtr;
-
-class CoreAudioException: public std::runtime_error
-{
-    long m_error_code;
-public:
-    CoreAudioException(const std::string &s, long code)
-	: std::runtime_error(s)
-    {
-	m_error_code = code;
-    }
-    long code() const { return m_error_code; }
-    bool isNotSupportedError() const
-    {
-	return m_error_code == FOURCC('t','y','p','?') ||
-	       m_error_code == FOURCC('f','m','t','?') ||
-	       m_error_code == FOURCC('p','t','y','?') ||
-	       m_error_code == FOURCC('c','h','k','?');
-    }
-};
-
-#define CHECKCA(expr) \
-    do { \
-	long err = expr; \
-	if (err) { \
-	    std::string msg = afutil::make_coreaudio_error(err, #expr); \
-	    std::stringstream ss; \
-	    ss << err << ": " << #expr; \
-	    throw CoreAudioException(msg, err); \
-	} \
-    } while (0)
+#include "cautil.h"
 
 namespace afutil {
-    std::string make_coreaudio_error(long code, const char *s);
-    inline std::wstring CF2W(CFStringRef str)
-    {
-	CFIndex length = CFStringGetLength(str);
-	if (!length) return L"";
-	std::vector<UniChar> buffer(length);
-	CFRange range = { 0, length };
-	CFStringGetCharacters(str, range, &buffer[0]);
-	return std::wstring(buffer.begin(), buffer.end());
-    }
-    inline CFStringPtr W2CF(std::wstring s)
-    {
-	CFStringRef sref = CFStringCreateWithCharacters(0,
-		reinterpret_cast<const UniChar*>(s.c_str()), s.size());
-	return CFStringPtr(sref, CFRelease);
-    }
     inline uint32_t getTypesForExtension(const wchar_t *fname)
     {
-	std::wstring ext = strutil::wslower(PathFindExtensionW(fname));
-	CFStringPtr cfsp = W2CF(ext.substr(1));
+	const wchar_t *pos = std::wcsrchr(fname, L'.');
+	if (!pos)
+	    return 0;
+	CFStringPtr cfsp = cautil::W2CF(strutil::wslower(pos + 1));
 	CFStringRef cfsr = cfsp.get();
 	UInt32 type = 0;
 	UInt32 size = sizeof(type);
@@ -105,7 +48,7 @@ namespace afutil {
 	CHECKCA(AudioFileGetGlobalInfo(kAudioFileGlobalInfo_FileTypeName,
 				       sizeof(UInt32), &type, &size, &name));
 	CFStringPtr _(name, CFRelease);
-	return CF2W(name);
+	return cautil::CF2W(name);
     }
     inline void getExtensionsForType(uint32_t type,
 				     std::vector<std::wstring> *vec)
@@ -120,7 +63,7 @@ namespace afutil {
 	for (CFIndex i = 0; i < count; ++i) {
 	    CFStringRef value =
 		static_cast<CFStringRef>(CFArrayGetValueAtIndex(aref, i));
-	    result.push_back(CF2W(value));
+	    result.push_back(cautil::CF2W(value));
 	}
 	vec->swap(result);
     }
@@ -145,7 +88,7 @@ namespace afutil {
 				       sizeof(asbd), &asbd,
 				       &size, &s));
 	CFStringPtr _(s, CFRelease);
-	std::wstring ws = CF2W(s);
+	std::wstring ws = cautil::CF2W(s);
 	// XXX
 	// Workaround for CoreAudio bug. MPEG Layer 1 and 2 is reported as
 	// Layer 3
@@ -229,12 +172,12 @@ public:
 				     kAudioFilePropertyPacketTableInfo,
 				     &size, result));
     }
-    void setPacketTableInfo(const AudioFilePacketTableInfo *info)
+    void setPacketTableInfo(const AudioFilePacketTableInfo &info)
     {
 	CHECKCA(AudioFileSetProperty(m_file.get(),
 				     kAudioFilePropertyPacketTableInfo,
 				     sizeof(AudioFilePacketTableInfo),
-				     info));
+				     &info));
     }
     void getChannelLayout(std::shared_ptr<AudioChannelLayout> *layout)
     {
@@ -249,15 +192,13 @@ public:
 		kAudioFilePropertyChannelLayout, &size, acl.get()));
 	layout->swap(acl);
     }
-    void setChannelLayout(const AudioChannelLayout *layout)
+    void setChannelLayout(const AudioChannelLayout &layout)
     {
-	UInt32 size = offsetof(AudioChannelLayout, mChannelDescriptions[1])
-	    + std::max(0, int(layout->mNumberChannelDescriptions) - 1) *
-	    sizeof(AudioChannelDescription);
+	UInt32 size = cautil::sizeofAudioChannelLayout(layout);
 	CHECKCA(AudioFileSetProperty(m_file.get(),
 				     kAudioFilePropertyChannelLayout,
 				     size,
-				     layout));
+				     &layout));
     }
     void getMagicCookieData(std::vector<uint8_t> *cookie)
     {

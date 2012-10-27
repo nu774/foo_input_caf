@@ -123,7 +123,7 @@ namespace meta_from_fb2k {
     class CFString8 {
     public:
 	CFString8(const std::string &s)
-	    : m_value(afutil::W2CF(strutil::m2w(s, utf8_codecvt_facet())))
+	    : m_value(cautil::W2CF(strutil::m2w(s, utf8_codecvt_facet())))
 	{}
 	operator CFStringRef() { return m_value.get(); }
 	operator const void*() { return m_value.get(); }

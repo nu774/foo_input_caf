@@ -1,5 +1,6 @@
 #pragma once
 #include "CAFDecoder.h"
+#define NOMINMAX
 #include "../SDK/foobar2000.h"
 
 class FilePositionSaver

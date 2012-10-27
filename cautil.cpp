@@ -1,6 +1,6 @@
-#include "AudioFileX.h"
+#include "cautil.h"
 
-namespace afutil {
+namespace cautil {
     std::string make_coreaudio_error(long code, const char *s)
     {
 	std::stringstream ss;
