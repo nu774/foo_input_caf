@@ -14,8 +14,6 @@
 #include "utf8_codecvt_facet.hpp"
 #include "strutil.h"
 
-#define fseeko _fseeki64
-
 namespace util {
     template <typename T, size_t size>
     inline size_t sizeof_array(const T (&)[size])
@@ -102,17 +100,16 @@ namespace util {
 	const wchar_t *fpos = PathFindFileNameW(path.c_str());
 	return path.substr(0, fpos - path.c_str());
     }
-    inline void shift_file_content(FILE *fp, int64_t space)
+    inline void shift_file_content(int fd, int64_t space)
     {
-	std::fflush(fp);
-	int64_t current_size = _filelengthi64(_fileno(fp));
+	int64_t current_size = _filelengthi64(fd);
 	int64_t begin, end = current_size;
 	char buf[8192];
 	for (; (begin = std::max(0LL, end - 8192)) < end; end = begin) {
-	    fseeko(fp, begin, SEEK_SET);
-	    std::fread(buf, 1, end - begin, fp);
-	    fseeko(fp, begin + space, SEEK_SET);
-	    std::fwrite(buf, 1, end - begin, fp);
+	    _lseeki64(fd, begin, SEEK_SET);
+	    read(fd, buf, end - begin);
+	    _lseeki64(fd, begin + space, SEEK_SET);
+	    write(fd, buf, end - begin);
 	}
     }
     /*
