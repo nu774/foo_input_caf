@@ -119,7 +119,7 @@ void CAFDecoder::retrieveChannelMap()
     if (!m_channel_layout.get())
 	return;
     try {
-	std::vector<char> ichannels, ochannels;
+	std::vector<uint16_t> ichannels, ochannels;
 	chanmap::getChannels(m_channel_layout.get(), &ichannels);
 	if (ichannels.size()) {
 	    chanmap::convertFromAppleLayout(ichannels, &ochannels);
