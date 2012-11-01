@@ -22,7 +22,7 @@ CAFDecoder::CAFDecoder(std::shared_ptr<IStreamReader> &pstream)
 					   &iafid));
     m_iaf.attach(iafid, true);
 #ifndef _DEBUG
-    if (m_iaf.getFileFormat() != FOURCC('c','a','f','f'))
+    if (m_iaf.getFileFormat() != kAudioFileCAFType)
 	throw std::runtime_error("Not a CAF file");
 #endif
 
@@ -30,7 +30,7 @@ CAFDecoder::CAFDecoder(std::shared_ptr<IStreamReader> &pstream)
     m_iaf.getFormatList(&aflist);
     m_iasbd = aflist[0].mASBD;
 #ifndef _DEBUG
-    if (m_iasbd.mFormatID == FOURCC('a','a','c','p'))
+    if (m_iasbd.mFormatID == kAudioFormatMPEG4AAC_HE_V2)
 	throw std::runtime_error("HE-AACv2 is not supported");
 #endif
 
@@ -75,7 +75,7 @@ CAFDecoder::CAFDecoder(std::shared_ptr<IStreamReader> &pstream)
     retrieveChannelMap();
 
     m_oasbd = m_iasbd;
-    if (m_iasbd.mFormatID == FOURCC('l','p','c','m')) {
+    if (m_iasbd.mFormatID == kAudioFormatLinearPCM) {
 	m_oasbd.mFormatFlags &= 0xf;
 	if (m_iasbd.mBitsPerChannel & 0x7)
 	    m_oasbd.mFormatFlags |= kAudioFormatFlagIsAlignedHigh;
@@ -83,7 +83,7 @@ CAFDecoder::CAFDecoder(std::shared_ptr<IStreamReader> &pstream)
 	if (m_iasbd.mBitsPerChannel == 8)
 	    m_oasbd.mFormatFlags &= ~kAudioFormatFlagIsSignedInteger;
     } else {
-	m_oasbd.mFormatID = FOURCC('l','p','c','m');
+	m_oasbd.mFormatID = kAudioFormatLinearPCM;
 	if (m_oasbd.mBitsPerChannel & 0x7)
 	    m_oasbd.mFormatFlags = kAudioFormatFlagIsAlignedHigh;
 	else
@@ -105,7 +105,7 @@ int CAFDecoder::getBitsPerChannel() const
 {
     if (m_iasbd.mBitsPerChannel)
 	return m_iasbd.mBitsPerChannel;
-    else if (m_iasbd.mFormatID == FOURCC('a','l','a','c'))
+    else if (m_iasbd.mFormatID == kAudioFormatAppleLossless)
 	return m_oasbd.mBitsPerChannel;
     else if (m_iasbd.mBytesPerPacket) {
 	return static_cast<double>(m_iasbd.mBytesPerPacket << 3)
@@ -133,15 +133,16 @@ void CAFDecoder::retrieveChannelMap()
 
 bool CAFDecoder::decodeToFloat() const
 {
-    return m_iasbd.mFormatID == FOURCC('a','a','c',' ') ||
-	   m_iasbd.mFormatID == FOURCC('a','a','c','h') ||
-	   m_iasbd.mFormatID == FOURCC('a','a','c','p') ||
-	   m_iasbd.mFormatID == FOURCC('p','a','a','c') ||
-	   m_iasbd.mFormatID == FOURCC('.','m','p','1') ||
-	   m_iasbd.mFormatID == FOURCC('.','m','p','2') ||
-	   m_iasbd.mFormatID == FOURCC('.','m','p','3') ||
-	   m_iasbd.mFormatID == FOURCC('a','c','-','3') ||
-	   m_iasbd.mFormatID == FOURCC('c','a','c','3') ||
+    return m_iasbd.mFormatID == kAudioFormatMPEG4AAC       ||
+	   m_iasbd.mFormatID == kAudioFormatMPEG4AAC_HE    ||
+	   m_iasbd.mFormatID == kAudioFormatMPEG4AAC_LD    ||
+	   m_iasbd.mFormatID == kAudioFormatMPEG4AAC_HE_V2 ||
+	   m_iasbd.mFormatID == FOURCC('p','a','a','c')    ||
+	   m_iasbd.mFormatID == kAudioFormatMPEGLayer1     ||
+	   m_iasbd.mFormatID == kAudioFormatMPEGLayer2     ||
+	   m_iasbd.mFormatID == kAudioFormatMPEGLayer3     ||
+	   m_iasbd.mFormatID == kAudioFormatAC3            ||
+	   m_iasbd.mFormatID == kAudioFormat60958AC3       ||
 	   m_iasbd.mFormatID == FOURCC('i','l','b','c');
 }
 
@@ -149,7 +150,7 @@ int CAFDecoder::getDecodingBitsPerChannel() const
 {
     if (m_iasbd.mFormatID == 'lpcm')
 	return m_iasbd.mBitsPerChannel;
-    else if (m_iasbd.mFormatID == FOURCC('a','l','a','c')) {
+    else if (m_iasbd.mFormatID == kAudioFormatAppleLossless) {
 	unsigned tab[] = { 16, 20, 24, 32 };
 	unsigned index = (m_iasbd.mFormatFlags - 1) & 0x3;
 	return tab[index];
@@ -238,5 +239,25 @@ uint32_t CAFDecoder::readSamples(void *buffer, size_t nsamples)
 
 void CAFDecoder::seek(int64_t frame_offset)
 {
-    CHECKCA(ExtAudioFileSeek(m_eaf, frame_offset));
+    int64_t preroll_offset = frame_offset;
+    int preroll_packets = 0;
+
+    switch (m_iasbd.mFormatID) {
+    case kAudioFormatMPEGLayer1: preroll_packets = 1; break;
+    case kAudioFormatMPEGLayer2: preroll_packets = 1; break;
+    case kAudioFormatMPEGLayer3: preroll_packets = 2; break;
+    }
+
+    preroll_offset = std::max(0LL, frame_offset - m_iasbd.mFramesPerPacket *
+			      preroll_packets);
+
+    CHECKCA(ExtAudioFileSeek(m_eaf, preroll_offset));
+
+    int64_t distance = frame_offset - preroll_offset;
+    if (distance > 0) {
+	size_t nbytes = distance * m_oasbd.mBytesPerFrame;
+	if (m_preroll_buffer.size() < nbytes)
+	    m_preroll_buffer.resize(nbytes);
+	readSamples(&m_preroll_buffer[0], distance);
+    }
 }

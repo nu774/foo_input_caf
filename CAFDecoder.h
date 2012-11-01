@@ -38,6 +38,7 @@ protected:
     std::vector<uint32_t> m_chanmap;
     std::shared_ptr<IStreamReader> m_pstream;
     IStreamWriter *m_pwriter;
+    std::vector<uint8_t> m_preroll_buffer;
 public:
     CAFDecoder(std::shared_ptr<IStreamReader> &pstream);
     uint64_t getLength() const

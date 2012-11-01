@@ -104,6 +104,7 @@
     <ClInclude Include="CoreAudio\MacTypes.h" />
     <ClInclude Include="ExtAudioFileX.h" />
     <ClInclude Include="init.h" />
+    <ClInclude Include="input_caf.h" />
     <ClInclude Include="StreamReaderImpl.h" />
     <ClInclude Include="strutil.h" />
     <ClInclude Include="utf8_codecvt_facet.hpp" />
