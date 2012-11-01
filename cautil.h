@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include "CoreAudio/CoreFoundation.h"
 #include "CoreAudio/CoreAudioTypes.h"
+#include "util.h"
 
 #define FOURCC(a,b,c,d) (((a)<<24)|((b)<<16)|((c)<<8)|(d))
 
@@ -68,6 +69,20 @@ namespace cautil {
 	return offsetof(AudioChannelLayout, mChannelDescriptions[1])
 		+ std::max(0, n - 1) * sizeof(AudioChannelDescription);
     }
+    inline int numChannelsOfAudioChannelLayout(const AudioChannelLayout *acl)
+    {
+	switch (acl->mChannelLayoutTag) {
+	case kAudioChannelLayoutTag_UseChannelDescriptions:
+	    return acl->mNumberChannelDescriptions;
+	case kAudioChannelLayoutTag_UseChannelBitmap:
+	    return util::bitcount(acl->mChannelBitmap);
+	}
+	return acl->mChannelLayoutTag & 0xffff;
+    }
+    AudioStreamBasicDescription
+	buildASBDForPCM(double sample_rate, unsigned channels,
+			unsigned bits, unsigned type_flags,
+			unsigned alignment=0);
 }
 
 #endif

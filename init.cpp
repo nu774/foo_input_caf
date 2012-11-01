@@ -1,6 +1,7 @@
 #include <memory>
-#include "util.h"
 #include "../SDK/foobar2000.h"
+#include "util.h"
+#include "win32util.h"
 
 std::string g_CoreAudioToolboxVersion;
 static HMODULE g_CoreAudioToolboxModule;
@@ -64,7 +65,7 @@ public:
     void on_init()
     {
 	HMODULE self = reinterpret_cast<HMODULE>(core_api::get_my_instance());
-	std::wstring path = util::get_module_directory(self);
+	std::wstring path = win32::get_module_directory(self);
 	std::vector<std::wstring> candidates;
 	candidates.push_back(path);
 	candidates.push_back(path + L"QTfiles\\");
@@ -88,7 +89,7 @@ public:
 	    g_CoreAudioToolboxModule = hmod;
 	    std::string version = getCoreAudioToolboxVersion(hmod);
 	    g_CoreAudioToolboxVersion.swap(version);
-	    std::string u8path = strutil::w2m(path, utf8_codecvt_facet());
+	    std::string u8path = strutil::w2us(path);
 	    console::formatter() << "foo_input_caf: "
 				 << u8path.c_str()
 				 << " version "

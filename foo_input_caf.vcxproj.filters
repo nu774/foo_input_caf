@@ -21,22 +21,19 @@
     <ClCompile Include="CAFMetaData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="cautil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="chanmap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="input_caf.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="strutil.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="utf8_codecvt_facet.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="init.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="cautil.cpp">
+    <ClCompile Include="strutil.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -50,19 +47,10 @@
     <ClInclude Include="CAFMetaData.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="cautil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="chanmap.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ExtAudioFileX.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="strutil.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="utf8_codecvt_facet.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="util.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="CoreAudio\AudioFile.h">
@@ -80,16 +68,28 @@
     <ClInclude Include="CoreAudio\MacTypes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="StreamReaderImpl.h">
+    <ClInclude Include="dl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ExtAudioFileX.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="init.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="cautil.h">
+    <ClInclude Include="input_caf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="input_caf.h">
+    <ClInclude Include="StreamReaderImpl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="strutil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="util.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="win32util.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -22,4 +22,25 @@ namespace cautil {
 	    ss << s << ": " << code;
 	return ss.str();
     }
+    AudioStreamBasicDescription
+	buildASBDForPCM(double sample_rate, unsigned channels_per_frame,
+			unsigned bits_per_channel, unsigned type,
+			unsigned alignment)
+    {
+	AudioStreamBasicDescription asbd = { 0 };
+	asbd.mFormatID = 'lpcm';
+	asbd.mFormatFlags = type;
+	if (bits_per_channel & 0x7)
+	    asbd.mFormatFlags |= alignment;
+	else
+	    asbd.mFormatFlags |= kAudioFormatFlagIsPacked;
+	asbd.mSampleRate = sample_rate;
+	asbd.mChannelsPerFrame = channels_per_frame;
+	asbd.mBitsPerChannel = bits_per_channel;
+	asbd.mFramesPerPacket = 1;
+	asbd.mBytesPerFrame =
+	    asbd.mChannelsPerFrame * ((asbd.mBitsPerChannel + 7) & ~7) / 8;
+	asbd.mBytesPerPacket = asbd.mFramesPerPacket * asbd.mBytesPerFrame;
+	return asbd;
+    }
 }

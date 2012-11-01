@@ -1,6 +1,7 @@
 #include "CAFMetaData.h"
 #include "strutil.h"
 #include "util.h"
+#include "dl.h"
 
 /*
  * Apple Core Audio Format Specification 1.0 defines some keys
@@ -15,7 +16,7 @@ namespace meta_to_fb2k {
     }
     void disc_number(file_info &pinfo, const char *key, const char *value)
     {
-	strutil::Tokenizer tokens(value, "/");
+	strutil::Tokenizer<char> tokens(value, "/");
 	char *num = tokens.next();
 	char *total = tokens.rest();
 	pinfo.meta_set("discnumber", num);
@@ -41,7 +42,7 @@ namespace meta_to_fb2k {
     }
     void track_number(file_info &pinfo, const char *key, const char *value)
     {
-	strutil::Tokenizer tokens(value, "/");
+	strutil::Tokenizer<char> tokens(value, "/");
 	char *num = tokens.next();
 	char *total = tokens.rest();
 	pinfo.meta_set("tracknumber", num);
@@ -123,7 +124,7 @@ namespace meta_from_fb2k {
     class CFString8 {
     public:
 	CFString8(const std::string &s)
-	    : m_value(cautil::W2CF(strutil::m2w(s, utf8_codecvt_facet())))
+	    : m_value(cautil::W2CF(strutil::us2w(s)))
 	{}
 	operator CFStringRef() { return m_value.get(); }
 	operator const void*() { return m_value.get(); }
@@ -133,12 +134,11 @@ namespace meta_from_fb2k {
 
     CFMutableDictionaryRef new_dictionary()
     {
-	const CFDictionaryKeyCallBacks *kcb
-	    = static_cast<const CFDictionaryKeyCallBacks *>(
-		util::load_cf_constant("kCFTypeDictionaryKeyCallBacks"));
-	const CFDictionaryValueCallBacks *vcb
-	    = static_cast<const CFDictionaryValueCallBacks *>(
-		util::load_cf_constant("kCFTypeDictionaryValueCallBacks"));
+	DL dll(GetModuleHandleA("CoreFoundation.dll"), false);
+	const CFDictionaryKeyCallBacks *kcb =
+	    dll.fetch("kCFTypeDictionaryKeyCallBacks");
+	const CFDictionaryValueCallBacks *vcb = 
+	    dll.fetch("kCFTypeDictionaryValueCallBacks");
 	return CFDictionaryCreateMutable(0, 0, kcb, vcb);
     }
 

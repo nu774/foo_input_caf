@@ -2,6 +2,7 @@
 #define ExtAudioFileX_H
 
 #include "CoreAudio/ExtAudioFile.h"
+#include "CoreAudio/AudioConverter.h"
 #include "cautil.h"
 
 class ExtAudioFileX {

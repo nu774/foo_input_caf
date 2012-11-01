@@ -89,7 +89,6 @@
     <ClCompile Include="init.cpp" />
     <ClCompile Include="input_caf.cpp" />
     <ClCompile Include="strutil.cpp" />
-    <ClCompile Include="utf8_codecvt_facet.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AudioFileX.h" />
@@ -102,13 +101,14 @@
     <ClInclude Include="CoreAudio\CoreAudioTypes.h" />
     <ClInclude Include="CoreAudio\CoreFoundation.h" />
     <ClInclude Include="CoreAudio\MacTypes.h" />
+    <ClInclude Include="dl.h" />
     <ClInclude Include="ExtAudioFileX.h" />
     <ClInclude Include="init.h" />
     <ClInclude Include="input_caf.h" />
     <ClInclude Include="StreamReaderImpl.h" />
     <ClInclude Include="strutil.h" />
-    <ClInclude Include="utf8_codecvt_facet.hpp" />
     <ClInclude Include="util.h" />
+    <ClInclude Include="win32util.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\pfc\pfc.vcxproj">

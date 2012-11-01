@@ -8,11 +8,23 @@
 #include <stdexcept>
 #include <algorithm>
 #include <iterator>
+#include <codecvt>
 
+#if defined _MSC_VER
+#ifndef strcasecmp
+#define strcasecmp _stricmp
+#endif
+#endif
+
+#if defined _MSC_VER
 typedef intptr_t ssize_t;
+#endif
 
 namespace strutil {
-    char *strsep(char **strp, const char *sep);
+    template<typename T> T *strsep(T **strp, const T *sep);
+    template<> char *strsep(char **strp, const char *sep);
+    template<> wchar_t *strsep(wchar_t **strp, const wchar_t *sep);
+
     std::wstring &m2w(std::wstring &dst, const char *src, size_t srclen,
 	    const std::codecvt<wchar_t, char, std::mbstate_t> &cvt);
 
@@ -26,6 +38,11 @@ namespace strutil {
 	std::basic_string<T> result;
 	std::transform(s.begin(), s.end(), std::back_inserter(result), conv);
 	return result;
+    }
+    inline
+    std::string slower(const std::string &s)
+    {
+	return strtransform(s, tolower);
     }
     inline
     std::wstring wslower(const std::wstring &s)
@@ -67,6 +84,11 @@ namespace strutil {
 	return m2w(src, std::use_facet<cvt_t>(loc));
     }
     inline
+    std::wstring us2w(const std::string &src)
+    {
+	return m2w(src, std::codecvt_utf8<wchar_t>());
+    }
+    inline
     std::string w2m(const std::wstring& src,
 		    const std::codecvt<wchar_t, char, std::mbstate_t> &cvt)
     {
@@ -80,24 +102,52 @@ namespace strutil {
 	std::locale loc("");
 	return w2m(src, std::use_facet<cvt_t>(loc));
     }
+    inline
+    std::string w2us(const std::wstring &src)
+    {
+	return w2m(src, std::codecvt_utf8<wchar_t>());
+    }
 
+    std::string format(const char *fmt, ...);
+    std::wstring format(const wchar_t *fmt, ...);
+
+    template <typename T>
+    std::basic_string<T> normalize_crlf(const T *s, const T *eol)
+    {
+	std::basic_string<T> result;
+	T c;
+	while ((c = *s++)) {
+	    if (c == '\r') {
+		result.append(eol);
+		if (*s == '\n')
+		    ++s;
+	    }
+	    else if (c == '\n')
+		result.append(eol);
+	    else
+		result.push_back(c);
+	}
+	return result;
+    }
+
+    template<typename T>
     class Tokenizer {
-	std::vector<char> m_buffer;
-	const char *m_sep;
-	char *m_tok;
+	std::vector<T> m_buffer;
+	const T *m_sep;
+	T *m_tok;
     public:
-	Tokenizer(const std::string &s, const char *sep)
+	Tokenizer(const std::basic_string<T> &s, const T *sep)
 	    : m_sep(sep)
 	{
 	    m_buffer.resize(s.size() + 1);
 	    std::memcpy(&m_buffer[0], s.data(), m_buffer.size() - 1);
 	    m_tok = &m_buffer[0];
 	}
-	char *next()
+	T *next()
 	{
 	    return strsep(&m_tok, m_sep);
 	}
-	char *rest()
+	T *rest()
 	{
 	    return m_tok;
 	}
