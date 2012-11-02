@@ -48,6 +48,7 @@ public:
 
 namespace cautil {
     std::string make_coreaudio_error(long code, const char *s);
+
     inline std::wstring CF2W(CFStringRef str)
     {
 	CFIndex length = CFStringGetLength(str);
@@ -63,6 +64,9 @@ namespace cautil {
 		reinterpret_cast<const UniChar*>(s.c_str()), s.size());
 	return CFStringPtr(sref, CFRelease);
     }
+
+    CFMutableDictionaryRef CreateDictionary(CFIndex capacity);
+
     inline size_t sizeofAudioChannelLayout(const AudioChannelLayout &acl)
     {
 	int n = acl.mNumberChannelDescriptions;

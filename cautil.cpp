@@ -1,4 +1,5 @@
 #include "cautil.h"
+#include "dl.h"
 
 namespace cautil {
     std::string make_coreaudio_error(long code, const char *s)
@@ -22,6 +23,27 @@ namespace cautil {
 	    ss << s << ": " << code;
 	return ss.str();
     }
+
+#ifndef REFALAC
+    CFMutableDictionaryRef CreateDictionary(CFIndex capacity)
+    {
+	static CFDictionaryKeyCallBacks *keyCB;
+	static CFDictionaryValueCallBacks *valueCB;
+	if (!keyCB) {
+	    DL dll(GetModuleHandleA("CoreFoundation.dll"), false);
+	    CFDictionaryKeyCallBacks *kcb =
+		dll.fetch("kCFTypeDictionaryKeyCallBacks");
+	    CFDictionaryValueCallBacks *vcb =
+		dll.fetch("kCFTypeDictionaryValueCallBacks");
+	    InterlockedCompareExchangePointerRelease(
+		     reinterpret_cast<LPVOID*>(&keyCB), kcb, 0);
+	    InterlockedCompareExchangePointerRelease(
+		     reinterpret_cast<LPVOID*>(&valueCB), vcb, 0);
+	}
+	return CFDictionaryCreateMutable(0, capacity, keyCB, valueCB);
+    }
+#endif
+
     AudioStreamBasicDescription
 	buildASBDForPCM(double sample_rate, unsigned channels_per_frame,
 			unsigned bits_per_channel, unsigned type,

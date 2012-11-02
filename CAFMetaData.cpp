@@ -132,16 +132,6 @@ namespace meta_from_fb2k {
 	CFStringPtr m_value;
     };
 
-    CFMutableDictionaryRef new_dictionary()
-    {
-	DL dll(GetModuleHandleA("CoreFoundation.dll"), false);
-	const CFDictionaryKeyCallBacks *kcb =
-	    dll.fetch("kCFTypeDictionaryKeyCallBacks");
-	const CFDictionaryValueCallBacks *vcb = 
-	    dll.fetch("kCFTypeDictionaryValueCallBacks");
-	return CFDictionaryCreateMutable(0, 0, kcb, vcb);
-    }
-
     /*
      * merge pair like tracknumber/totaltracks into a single key-value,
      * and remove original entities from "info" (for succeeding tasks)
@@ -225,7 +215,8 @@ namespace meta_from_fb2k {
 				 CFDictionaryPtr *result)
     {
 	file_info_impl info(pinfo); // get a copy and work on it
-	std::shared_ptr<const __CFDictionary> dic(new_dictionary(), CFRelease);
+	std::shared_ptr<const __CFDictionary>
+	    dic(cautil::CreateDictionary(0), CFRelease);
 	__CFDictionary *dp = const_cast<__CFDictionary*>(dic.get());
 
 	number_pair(info, dp, "TRACK");
