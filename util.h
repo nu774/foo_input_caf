@@ -11,6 +11,8 @@
 #include <stdexcept>
 #include <cerrno>
 #include <stdint.h>
+#include <sys/stat.h>
+#include <io.h>
 #include "strutil.h"
 
 #ifdef _MSC_VER
@@ -37,6 +39,11 @@ inline int lrint(double x)
 inline int _wtoi(const wchar_t *s) { return std::wcstol(s, 0, 10); }
 #endif
 
+#ifdef _MSC_VER
+#define fseeko _fseeki64
+#define ftello _ftelli64
+#endif
+
 namespace util {
     template <typename T, size_t size>
     inline size_t sizeof_array(const T (&)[size]) { return size; }
@@ -61,12 +68,17 @@ namespace util {
 	operator uint32_t() const { return nvalue; }
     };
 
-    inline
-    void *xcalloc(size_t count, size_t size)
+    inline void *xcalloc(size_t count, size_t size)
     {
 	void *memory = std::calloc(count, size);
 	if (!memory) throw std::bad_alloc();
 	return memory;
+    }
+
+    inline bool is_seekable(int fd)
+    {
+	struct stat stb = { 0 };
+	return fstat(fd, &stb) == 0 && (stb.st_mode & S_IFMT) == S_IFREG;
     }
 
     /*
@@ -149,29 +161,26 @@ namespace util {
 	return (bits & 0x0000ffff) + (bits >>16 & 0x0000ffff);
     }
 
-    /* XXX: assumes little endian host */
     inline uint16_t l2host16(uint16_t n) { return n; }
     inline uint32_t l2host32(uint32_t n) { return n; }
+    inline uint64_t l2host64(uint64_t n) { return n; }
 
     inline uint16_t b2host16(uint16_t n)
     {
-	return (n >> 8) | (n << 8);
+	return _byteswap_ushort(n);
     }
     inline uint32_t b2host32(uint32_t n)
     {
-	return (b2host16(n & 0xffff) << 16) | b2host16(n >> 16);
+	return _byteswap_ulong(n);
     }
     inline uint64_t b2host64(uint64_t n)
     {
-	return (static_cast<uint64_t>(b2host32(n & 0xffffffff)) << 32) |
-		b2host32(n >> 32);
+	return _byteswap_uint64(n);
     }
     inline uint32_t h2big32(uint32_t n)
     {
-	return b2host32(n);
+	return _byteswap_ulong(n);
     }
-
-    void bswap16buffer(uint8_t *buffer, size_t size);
 
     void bswap16buffer(uint8_t *buffer, size_t size);
 
@@ -194,6 +203,22 @@ namespace util {
 	ss << strutil::w2us(message) << ": " << std::strerror(errno);
 	throw std::runtime_error(ss.str());
     }
+
+    class FilePositionSaver
+    {
+    private:
+	int m_fd;
+	int64_t m_saved_position;
+    public:
+	explicit FilePositionSaver(int fd): m_fd(fd)
+	{
+	    m_saved_position = _lseeki64(m_fd, 0, SEEK_CUR);
+	}
+	~FilePositionSaver()
+	{
+	    _lseeki64(m_fd, m_saved_position, SEEK_SET);
+	}
+    };
 }
 
 #define CHECKCRT(expr) \

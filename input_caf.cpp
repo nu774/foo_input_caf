@@ -220,7 +220,7 @@ private:
 	m_decoder.swap(decoder);
 	initialize_buffer();
 
-	m_encoder_delay = m_decoder->getEncoderDelay();
+	m_current_frame = m_encoder_delay = m_decoder->getEncoderDelay();
 	const AudioStreamBasicDescription &asbd = m_decoder->getInputFormat();
 	m_vbr_helper.reset();
     }
