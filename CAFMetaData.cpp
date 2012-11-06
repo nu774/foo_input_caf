@@ -36,9 +36,17 @@ namespace meta_to_fb2k {
     {
 	pinfo.info_set("tool", value);
     }
+    void lyricist(file_info &pinfo, const char *key, const char *value)
+    {
+	pinfo.meta_set("writer", value);
+    }
     void recorded_date(file_info &pinfo, const char *key, const char *value)
     {
 	pinfo.meta_set("record date", value);
+    }
+    void tempo(file_info &pinfo, const char *key, const char *value)
+    {
+	pinfo.meta_set("bpm", value);
     }
     void track_number(file_info &pinfo, const char *key, const char *value)
     {
@@ -67,10 +75,12 @@ namespace meta_to_fb2k {
 	{ "channel layout",			set_to_info		},
 	{ "comments",				comments		},
 	{ "encoding application",		encoding_application	},
+	{ "lyricist",				lyricist		},
 	{ "nominal bit rate",			set_to_info		},
 	{ "recorded date",			recorded_date		},
 	{ "source bit depth",			set_to_info		},
 	{ "source encoder",			set_to_info		},
+	{ "tempo",				tempo			},
 	{ "track number",			track_number		},
 	{ "year",				year			},
     };
@@ -100,6 +110,7 @@ namespace meta_from_fb2k {
     const char * known_keys[][2] = {
 	{ "ALBUM",			"album"				},
 	{ "ARTIST",			"artist"			},
+	{ "BPM",			"tempo"				},
 	{ "COMMENT",			"comments"			},
 	{ "COMPOSER",			"composer"			},
 	{ "COPYRIGHT",			"copyright"			},
@@ -112,6 +123,7 @@ namespace meta_from_fb2k {
 	{ "TEMPO",			"tempo"				},
 	{ "TIME SIGNATURE",		"time signature"		},
 	{ "TITLE",			"title"				},
+	{ "WRITER",			"lyricist"			},
 	{ "approximate duration in seconds",
 	    				"approximate duration in seconds" },
 	{ "channel layout",		"channel layout"		},
