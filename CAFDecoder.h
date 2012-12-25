@@ -43,54 +43,54 @@ public:
     CAFDecoder(std::shared_ptr<IStreamReader> &pstream);
     uint64_t getLength() const
     {
-	return m_length;
+        return m_length;
     }
     bool isLossless() const
     {
-	return m_iasbd.mFormatID == FOURCC('l','p','c','m')
-	    || m_iasbd.mFormatID == FOURCC('a','l','a','c');
+        return m_iasbd.mFormatID == FOURCC('l','p','c','m')
+            || m_iasbd.mFormatID == FOURCC('a','l','a','c');
     }
     uint32_t getBitrate() const
     {
-	return (m_bitrate + 500) / 1000;
+        return (m_bitrate + 500) / 1000;
     }
     const AudioStreamBasicDescription &getInputFormat() const
     {
-	return m_iasbd;
+        return m_iasbd;
     }
     const AudioStreamBasicDescription &getOutputFormat() const
     {
-	return m_oasbd;
+        return m_oasbd;
     }
     uint32_t getChannelMask() const
     {
-	return m_chanmask;
+        return m_chanmask;
     }
     bool isCBR()
     {
-	return m_isCBR;
+        return m_isCBR;
     }
     int getEncoderDelay() const
     {
-	return m_encoder_delay;
+        return m_encoder_delay;
     }
     int getBitsPerChannel() const;
     uint32_t readSamples(void *buffer, size_t nsamples);
     void seek(int64_t frame_offset);
     void getPacketTableInfo(AudioFilePacketTableInfo *info)
     {
-	*info = m_ptinfo;
+        *info = m_ptinfo;
     }
     uint64_t getByteOffset(uint64_t packet)
     {
-	return m_iaf.getPacketToByte(packet);
+        return m_iaf.getPacketToByte(packet);
     }
     void setInfoDictionary(CFDictionaryRef dict)
     {
-	if (m_pwriter)
-	    m_iaf.setInfoDictionary(dict);
-	else
-	    throw std::runtime_error("CAFDecoder: not opened for writing");
+        if (m_pwriter)
+            m_iaf.setInfoDictionary(dict);
+        else
+            throw std::runtime_error("CAFDecoder: not opened for writing");
     }
 private:
     void retrieveChannelMap();
@@ -99,34 +99,34 @@ private:
 
     static
     OSStatus staticReadCallback(void *cookie, SInt64 pos, UInt32 count,
-				void *data, UInt32 *nread)
+                                void *data, UInt32 *nread)
     {
-	CAFDecoder *self = static_cast<CAFDecoder*>(cookie);
-	return self->readCallback(pos, count, data, nread);
+        CAFDecoder *self = static_cast<CAFDecoder*>(cookie);
+        return self->readCallback(pos, count, data, nread);
     }
     static
     SInt64 staticSizeCallback(void *cookie)
     {
-	CAFDecoder *self = static_cast<CAFDecoder*>(cookie);
-	return self->sizeCallback();
+        CAFDecoder *self = static_cast<CAFDecoder*>(cookie);
+        return self->sizeCallback();
     }
     static
     OSStatus staticWriteCallback(void *cookie, SInt64 pos, UInt32 count,
-				 const void *data, UInt32 *nwritten)
+                                 const void *data, UInt32 *nwritten)
     {
-	CAFDecoder *self = static_cast<CAFDecoder*>(cookie);
-	return self->writeCallback(pos, count, data, nwritten);
+        CAFDecoder *self = static_cast<CAFDecoder*>(cookie);
+        return self->writeCallback(pos, count, data, nwritten);
     }
     static
     OSStatus staticTruncateCallback(void *cookie, SInt64 size)
     {
-	CAFDecoder *self = static_cast<CAFDecoder*>(cookie);
-	return self->truncateCallback(size);
+        CAFDecoder *self = static_cast<CAFDecoder*>(cookie);
+        return self->truncateCallback(size);
     }
 
     OSStatus readCallback(SInt64 pos, UInt32 count, void *data, UInt32 *nread);
     SInt64 sizeCallback();
     OSStatus writeCallback(SInt64 pos, UInt32 count, const void *data,
-			   UInt32 *nwritten);
+                           UInt32 *nwritten);
     OSStatus truncateCallback(SInt64 size);
 };

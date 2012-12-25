@@ -10,13 +10,13 @@ private:
     int64_t m_saved_position;
 public:
     FilePositionSaver(std::shared_ptr<IStreamReader> &pstream)
-	: m_pstream(pstream)
+        : m_pstream(pstream)
     {
-	m_saved_position = m_pstream->get_position();
+        m_saved_position = m_pstream->get_position();
     }
     ~FilePositionSaver()
     {
-	m_pstream->seek(m_saved_position, SEEK_SET);
+        m_pstream->seek(m_saved_position, SEEK_SET);
     }
 };
 
@@ -26,10 +26,10 @@ class CAFMetaData {
     std::vector<kvpair_t> m_meta;
 public:
     CAFMetaData(std::shared_ptr<IStreamReader> &pstream)
-	: m_pstream(pstream)
+        : m_pstream(pstream)
     {
-	FilePositionSaver saver(m_pstream);
-	readInfoChunk();
+        FilePositionSaver saver(m_pstream);
+        readInfoChunk();
     }
     void getInfo(file_info &pinfo);
 private:
@@ -39,5 +39,5 @@ private:
 
 namespace meta_from_fb2k {
     void convertToInfoDictionary(const file_info &pinfo,
-				 CFDictionaryPtr *result);
+                                 CFDictionaryPtr *result);
 }

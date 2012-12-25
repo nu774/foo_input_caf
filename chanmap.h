@@ -10,9 +10,9 @@ namespace chanmap {
     void getChannels(uint32_t bitmap, std::vector<uint16_t> *result);
     void getChannels(const AudioChannelLayout *acl, std::vector<uint16_t> *res);
     void convertFromAppleLayout(const std::vector<uint16_t> &from,
-				std::vector<uint16_t> *to);
+                                std::vector<uint16_t> *to);
     void getMappingToUSBOrder(const std::vector<uint16_t> &channels,
-			      std::vector<uint32_t> *result);
+                              std::vector<uint32_t> *result);
 }
 
 #endif
