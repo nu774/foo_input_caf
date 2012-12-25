@@ -9,55 +9,74 @@
 #include "../helpers/helpers.h"
 #include "init.h"
 
-static const char *get_codec_name(uint32_t fcc)
-{
-    switch (fcc) {
-    case FOURCC('.','m','p','1'):
-	return "MP1";
-    case FOURCC('.','m','p','2'):
-	return "MP2";
-    case FOURCC('.','m','p','3'):
-	return "MP3";
-    case FOURCC('Q','D','M','2'):
-	return "QDesign Music 2";
-    case FOURCC('Q','D','M','C'):
-	return "QDesign";
-    case FOURCC('Q','c','l','p'):
-	return "Qualcomm PureVoice";
-    case FOURCC('Q','c','l','q'):
-	return "Qualcomm QCELP";
-    case FOURCC('a','a','c',' '):
-	return "AAC";
-    case FOURCC('a','a','c','h'):
-	return "AAC";
-    case FOURCC('a','a','c','p'):
-	return "AAC";
-    case FOURCC('a','l','a','c'):
-	return "ALAC";
-    case FOURCC('a','l','a','w'):
-	return "A-Law";
-    case FOURCC('d','v','i','8'):
-	return "DVI";
-    case FOURCC('i','l','b','c'):
-	return "iLBC";
-    case FOURCC('i','m','a','4'):
-	return "IMA 4:1";
-    case FOURCC('l','p','c','m'):
-	return "PCM";
-    case FOURCC('m','s','\000','\002'):
-	return "MS ADPCM";
-    case FOURCC('m','s','\000','\021'):
-	return "DVI/IMA ADPCM";
-    case FOURCC('m','s','\000','1'):
-	return "MS GSM 6.10";
-    case FOURCC('p','a','a','c'):
-	return "AAC";
-    case FOURCC('s','a','m','r'):
-	return "AMR-NB";
-    case FOURCC('u','l','a','w'):
-	return "\xc2""\xb5""-Law";
+namespace {
+    const char *get_codec_name(uint32_t fcc)
+    {
+        switch (fcc) {
+        case FOURCC('.','m','p','1'):
+            return "MP1";
+        case FOURCC('.','m','p','2'):
+            return "MP2";
+        case FOURCC('.','m','p','3'):
+            return "MP3";
+        case FOURCC('Q','D','M','2'):
+            return "QDesign Music 2";
+        case FOURCC('Q','D','M','C'):
+            return "QDesign";
+        case FOURCC('Q','c','l','p'):
+            return "Qualcomm PureVoice";
+        case FOURCC('Q','c','l','q'):
+            return "Qualcomm QCELP";
+        case FOURCC('a','a','c',' '):
+            return "AAC";
+        case FOURCC('a','a','c','h'):
+            return "AAC";
+        case FOURCC('a','a','c','p'):
+            return "AAC";
+        case FOURCC('a','l','a','c'):
+            return "ALAC";
+        case FOURCC('a','l','a','w'):
+            return "A-Law";
+        case FOURCC('d','v','i','8'):
+            return "DVI";
+        case FOURCC('i','l','b','c'):
+            return "iLBC";
+        case FOURCC('i','m','a','4'):
+            return "IMA 4:1";
+        case FOURCC('l','p','c','m'):
+            return "PCM";
+        case FOURCC('m','s','\000','\002'):
+            return "MS ADPCM";
+        case FOURCC('m','s','\000','\021'):
+            return "DVI/IMA ADPCM";
+        case FOURCC('m','s','\000','1'):
+            return "MS GSM 6.10";
+        case FOURCC('p','a','a','c'):
+            return "AAC";
+        case FOURCC('s','a','m','r'):
+            return "AMR-NB";
+        case FOURCC('u','l','a','w'):
+            return "\xc2""\xb5""-Law";
+        }
+        return 0;
     }
-    return 0;
+    const char *channel_name(unsigned n)
+    {
+        const char *tab[] = {
+            "?","FL","FR","FC","LF","BL","BR","FLC","FRC","BC",
+            "SL","SR","TC","TFL","TFC","TFR","TBL","TBC","TBR"
+        };
+        return n <= 18 ? tab[n] : "?";
+    }
+    std::string describe_channels(uint32_t mask)
+    {
+        std::stringstream ss;
+        ss << util::bitcount(mask) << ":";
+        for (unsigned i = 0; i < 32; ++i)
+            if (mask & (1<<i))
+                ss << ' ' << channel_name(i + 1);
+        return ss.str();
+    }
 }
 
 class input_caf {
@@ -68,16 +87,13 @@ class input_caf {
     uint32_t m_encoder_delay;
     uint32_t m_pull_packets;
     uint64_t m_current_frame;
+    uint32_t m_chanmask;
 public:
     void open(service_ptr_t<file> pfile, const char *path,
 	      t_input_open_reason reason, abort_callback &abort)
     {
 	if (g_CoreAudioToolboxVersion.empty())
 	    throw pfc::exception("CoreAudioToolbox.dll not found");
-	/*
-	if (reason == input_open_info_write)
-	    throw exception_io_unsupported_format();
-	*/
 	m_pfile = pfile;
 	input_open_file_helper(m_pfile, path, reason, abort);
 	m_pfile->ensure_seekable();
@@ -94,7 +110,7 @@ public:
 	pinfo.set_length(m_decoder->getLength() / asbd.mSampleRate);
 	pinfo.info_set_bitrate(m_decoder->getBitrate());
 	pinfo.info_set_int("samplerate", asbd.mSampleRate);
-	pinfo.info_set_int("channels", asbd.mChannelsPerFrame);
+	pinfo.info_set("channels", describe_channels(m_chanmask).c_str());
 
 	int bitwidth = m_decoder->getBitsPerChannel();
 	if (bitwidth > 0)
@@ -137,10 +153,6 @@ public:
 	nframes = m_decoder->readSamples(&m_buffer[0], nframes);
 	if (!nframes)
 	    return false;
-	uint32_t chanmask = m_decoder->getChannelMask();
-	if (!chanmask)
-	    chanmask =
-		audio_chunk::g_guess_channel_config(asbd.mChannelsPerFrame);
 	if (asbd.mFormatFlags & kAudioFormatFlagIsFloat) {
 	    chunk.set_data_floatingpoint_ex(&m_buffer[0],
 					    nframes * asbd.mBytesPerFrame,
@@ -148,14 +160,14 @@ public:
 					    asbd.mChannelsPerFrame,
 					    (asbd.mBitsPerChannel + 7) & ~7,
 					    audio_chunk::FLAG_LITTLE_ENDIAN,
-					    chanmask);
+					    m_chanmask);
 	} else {
 	    chunk.set_data_fixedpoint_signed(&m_buffer[0],
 					     nframes * asbd.mBytesPerFrame,
 					     asbd.mSampleRate,
 					     asbd.mChannelsPerFrame,
 					     (asbd.mBitsPerChannel + 7) & ~7,
-					     chanmask);
+					     m_chanmask);
 	}
 	update_dynamic_vbr_info(m_current_frame, m_current_frame + nframes);
 	m_current_frame += nframes;
@@ -222,6 +234,13 @@ private:
 
 	m_current_frame = m_encoder_delay = m_decoder->getEncoderDelay();
 	const AudioStreamBasicDescription &asbd = m_decoder->getInputFormat();
+	m_chanmask = m_decoder->getChannelMask();
+	if (!m_chanmask && asbd.mChannelsPerFrame <= 8) {
+            static const uint32_t tab[] = {
+                0x4, 0x3, 0x7, 0x33, 0x37, 0x3f, 0x13f, 0x63f
+            };
+            m_chanmask = tab[asbd.mChannelsPerFrame - 1];
+        }
 	m_vbr_helper.reset();
     }
     void initialize_buffer()
