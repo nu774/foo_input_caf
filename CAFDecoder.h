@@ -41,6 +41,11 @@ protected:
     std::vector<uint8_t> m_preroll_buffer;
 public:
     CAFDecoder(std::shared_ptr<IStreamReader> &pstream);
+    ~CAFDecoder()
+    {
+        m_eaf.attach(0, false);
+        m_iaf.close();
+    }
     uint64_t getLength() const
     {
         return m_length;
