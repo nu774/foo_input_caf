@@ -66,21 +66,24 @@ namespace meta_to_fb2k {
         const char *key;
         void (*handler)(file_info &, const char *, const char *);
     } handlers[] = {
-        { "DISC NUMBER",                        disc_number             },
-        { "REPLAYGAIN_ALBUM_GAIN",              replaygain              },
-        { "REPLAYGAIN_ALBUM_PEAK",              replaygain              },
-        { "REPLAYGAIN_TRACK_GAIN",              replaygain              },
-        { "REPLAYGAIN_TRACK_PEAK",              replaygain              },
         { "approximate duration in seconds",    set_to_info             },
         { "channel layout",                     set_to_info             },
         { "comments",                           comments                },
+        { "DISC",                               disc_number             },
+        { "DISC NUMBER",                        disc_number             },
+        { "ENCODER",                            encoding_application    },
         { "encoding application",               encoding_application    },
         { "lyricist",                           lyricist                },
         { "nominal bit rate",                   set_to_info             },
         { "recorded date",                      recorded_date           },
+        { "REPLAYGAIN_ALBUM_GAIN",              replaygain              },
+        { "REPLAYGAIN_ALBUM_PEAK",              replaygain              },
+        { "REPLAYGAIN_TRACK_GAIN",              replaygain              },
+        { "REPLAYGAIN_TRACK_PEAK",              replaygain              },
         { "source bit depth",                   set_to_info             },
         { "source encoder",                     set_to_info             },
         { "tempo",                              tempo                   },
+        { "TRACK",                              track_number            },
         { "track number",                       track_number            },
         { "year",                               year                    },
     };
@@ -92,7 +95,7 @@ namespace meta_to_fb2k {
                 const char *key = static_cast<const char *>(k);
                 const meta_handler_entry_t *ent
                     = static_cast<const meta_handler_entry_t *>(v);
-                return std::strcmp(key, ent->key);
+                return strcasecmp(key, ent->key);
             }
         };
         const meta_handler_entry_t *entry =
@@ -191,15 +194,14 @@ namespace meta_from_fb2k {
 
         if (!entry && only_found)
             return;
+        std::string skey;
         if (entry)
-            key = (*entry)[1];
-        /*
-         * XXX
-         * Should we explicitly convert key to uppercase here
-         * when key is not known? We assume f2bk always passes us
-         * uppercase keys for metadata, hence no-op.
-         */
-        CFDictionarySetValue(dict, CFString8(key), CFString8(value));
+            skey = (*entry)[1];
+        else
+            std::transform(key, key + strlen(key),
+                           std::back_inserter(skey),
+                           toupper);
+        CFDictionarySetValue(dict, CFString8(skey), CFString8(value));
     }
     void put_replaygain(const file_info &info, __CFDictionary *dict)
     {
