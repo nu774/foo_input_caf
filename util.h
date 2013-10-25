@@ -15,7 +15,7 @@
 #include <io.h>
 #include "strutil.h"
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && _MSC_VER < 1700
 #ifdef _M_IX86
 inline int lrint(double x)
 {
@@ -137,7 +137,7 @@ namespace util {
         return _byteswap_ulong(n);
     }
 
-    void bswapbuffer(uint8_t *buffer, size_t size, uint32_t width);
+    void bswapbuffer(void *buffer, size_t size, uint32_t width);
 
     inline void throw_crt_error(const std::string &message)
     {
@@ -174,7 +174,20 @@ namespace util {
     void unpack(const void *input, void *output, size_t *size, unsigned width,
                 unsigned new_width);
 
+    void convert_sign(uint32_t *data, size_t size);
+
     ssize_t nread(int fd, void *buffer, size_t size);
+
+    inline double dB_to_scale(double dB)
+    {
+        return std::pow(10, 0.05 * dB);
+    }
+
+    inline double scale_to_dB(double scale)
+    {
+        return 20 * std::log10(scale);
+    }
+
 }
 
 #define CHECKCRT(expr) \
