@@ -42,7 +42,7 @@ namespace meta_to_fb2k {
     }
     void recorded_date(file_info &pinfo, const char *key, const char *value)
     {
-        pinfo.meta_set("record date", value);
+        pinfo.meta_set("date", value);
     }
     void tempo(file_info &pinfo, const char *key, const char *value)
     {
