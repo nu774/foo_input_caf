@@ -77,23 +77,22 @@ CAFDecoder::CAFDecoder(std::shared_ptr<IStreamReader> &pstream)
     m_oasbd = m_iasbd;
     if (m_iasbd.mFormatID == kAudioFormatLinearPCM) {
         m_oasbd.mFormatFlags &= 0xf;
-        if (m_iasbd.mBitsPerChannel & 0x7)
-            m_oasbd.mFormatFlags |= kAudioFormatFlagIsAlignedHigh;
         m_oasbd.mFormatFlags &= ~kAudioFormatFlagIsBigEndian;
         if (m_iasbd.mBitsPerChannel == 8)
             m_oasbd.mFormatFlags &= ~kAudioFormatFlagIsSignedInteger;
     } else {
         m_oasbd.mFormatID = kAudioFormatLinearPCM;
-        if (m_oasbd.mBitsPerChannel & 0x7)
-            m_oasbd.mFormatFlags = kAudioFormatFlagIsAlignedHigh;
-        else
-            m_oasbd.mFormatFlags = kAudioFormatFlagIsPacked;
+        m_oasbd.mFormatFlags = 0;
+        m_oasbd.mBitsPerChannel = getDecodingBitsPerChannel();
         if (decodeToFloat())
             m_oasbd.mFormatFlags |= kAudioFormatFlagIsFloat;
         else
             m_oasbd.mFormatFlags |= kAudioFormatFlagIsSignedInteger;
     }
-    m_oasbd.mBitsPerChannel = getDecodingBitsPerChannel();
+    if (m_oasbd.mBitsPerChannel & 0x7)
+        m_oasbd.mFormatFlags |= kAudioFormatFlagIsAlignedHigh;
+    else
+        m_oasbd.mFormatFlags |= kAudioFormatFlagIsPacked;
     m_oasbd.mFramesPerPacket = 1;
     m_oasbd.mBytesPerFrame = m_oasbd.mChannelsPerFrame *
         ((m_oasbd.mBitsPerChannel + 7) >> 3);
