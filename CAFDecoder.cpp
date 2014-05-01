@@ -244,7 +244,7 @@ void CAFDecoder::seek(int64_t frame_offset)
     switch (m_iasbd.mFormatID) {
     case kAudioFormatMPEGLayer1: preroll_packets = 1; break;
     case kAudioFormatMPEGLayer2: preroll_packets = 1; break;
-    case kAudioFormatMPEGLayer3: preroll_packets = 2; break;
+    case kAudioFormatMPEGLayer3: preroll_packets = 9; break;
     }
 
     preroll_offset = std::max(0LL, frame_offset - m_iasbd.mFramesPerPacket *
