@@ -3,28 +3,6 @@
 
 #include "MacTypes.h"
 
-struct AudioValueRange
-{
-    Float64 mMinimum;
-    Float64 mMaximum;
-};
-typedef struct AudioValueRange  AudioValueRange;
-
-struct AudioBuffer
-{
-    UInt32  mNumberChannels;
-    UInt32  mDataByteSize;
-    void*   mData;
-};
-typedef struct AudioBuffer  AudioBuffer;
-
-struct AudioBufferList
-{
-    UInt32      mNumberBuffers;
-    AudioBuffer mBuffers[kVariableLengthArray];
-};
-typedef struct AudioBufferList  AudioBufferList;
-
 struct AudioStreamBasicDescription
 {
     Float64 mSampleRate;
@@ -64,6 +42,13 @@ enum
     kAppleLosslessFormatFlag_24BitSourceData    = 3,
     kAppleLosslessFormatFlag_32BitSourceData    = 4
 };
+
+struct AudioFilePacketTableInfo {
+    SInt64  mNumberValidFrames;
+    SInt32  mPrimingFrames;
+    SInt32  mRemainderFrames;
+};
+typedef struct AudioFilePacketTableInfo AudioFilePacketTableInfo;
 
 struct  AudioStreamPacketDescription
 {

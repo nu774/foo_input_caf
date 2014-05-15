@@ -56,8 +56,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>lib;..\shared</AdditionalLibraryDirectories>
-      <AdditionalDependencies>user32.lib;advapi32.lib;shlwapi.lib;CoreAudioToolbox.lib;CoreFoundation.lib;shared.lib</AdditionalDependencies>
-      <DelayLoadDLLs>CoreAudioToolbox.dll;CoreFoundation.dll</DelayLoadDLLs>
+      <AdditionalDependencies>user32.lib;advapi32.lib;shlwapi.lib;shared.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -68,7 +67,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;NDEBUG;_WINDOWS;_USRDLL;FOO_INPUT_CAF_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -77,38 +76,28 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>lib;..\shared</AdditionalLibraryDirectories>
-      <AdditionalDependencies>user32.lib;advapi32.lib;shlwapi.lib;CoreAudioToolbox.lib;CoreFoundation.lib;shared.lib</AdditionalDependencies>
-      <DelayLoadDLLs>CoreAudioToolbox.dll;CoreFoundation.dll</DelayLoadDLLs>
+      <AdditionalDependencies>user32.lib;advapi32.lib;shlwapi.lib;shared.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="CAFDecoder.cpp" />
-    <ClCompile Include="CAFMetaData.cpp" />
-    <ClCompile Include="cautil.cpp" />
-    <ClCompile Include="chanmap.cpp" />
-    <ClCompile Include="init.cpp" />
+    <ClCompile Include="CAFFile.cpp" />
+    <ClCompile Include="Decoder.cpp" />
+    <ClCompile Include="IMA4Decoder.cpp" />
     <ClCompile Include="input_caf.cpp" />
-    <ClCompile Include="strutil.cpp" />
+    <ClCompile Include="LPCMDecoder.cpp" />
+    <ClCompile Include="Metadata.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AudioFileX.h" />
-    <ClInclude Include="CAFDecoder.h" />
-    <ClInclude Include="CAFMetaData.h" />
-    <ClInclude Include="cautil.h" />
-    <ClInclude Include="chanmap.h" />
-    <ClInclude Include="CoreAudio\AudioFile.h" />
-    <ClInclude Include="CoreAudio\AudioFormat.h" />
+    <ClInclude Include="CAFFile.h" />
     <ClInclude Include="CoreAudio\CoreAudioTypes.h" />
-    <ClInclude Include="CoreAudio\CoreFoundation.h" />
     <ClInclude Include="CoreAudio\MacTypes.h" />
-    <ClInclude Include="dl.h" />
-    <ClInclude Include="ExtAudioFileX.h" />
-    <ClInclude Include="init.h" />
-    <ClInclude Include="input_caf.h" />
-    <ClInclude Include="StreamReaderImpl.h" />
-    <ClInclude Include="strutil.h" />
-    <ClInclude Include="util.h" />
-    <ClInclude Include="win32util.h" />
+    <ClInclude Include="Decoder.h" />
+    <ClInclude Include="foo_input_caf.h" />
+    <ClInclude Include="Helpers.h" />
+    <ClInclude Include="IMA4Decoder.h" />
+    <ClInclude Include="LPCMDecoder.h" />
+    <ClInclude Include="Metadata.h" />
+    <ClInclude Include="PacketDecoder.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\pfc\pfc.vcxproj">

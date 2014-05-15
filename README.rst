@@ -1,19 +1,18 @@
-=========================================
-foo_input_caf - fb2k input plugin for CAF
-=========================================
+foo_input_caf
+=============
 
-Note
-----
-foo_input_caf is based on, and depends on Apple Application Support DLLs.
+What is this?
+-------------
+foobar2000 input plugin that support decoding of CAF (Core Audio Format) files.
+Previous versions upto 0.0.10 were dependent on Apple Application Support files, but now it has become completely independent from them.
 
-They are searched from the following place:
+Supported codecs
+----------------
+- LPCM
+- MPEG audio (MP1, MP2, MP3)
+- AAC (LC, SBR, SBR+PS)
+- ALAC
+- IMA4:1
 
-1. The directory where foo_input_caf.dll is installed.
-2. QTfiles subfolder under the foo_input_caf install directory 
-3. Standard install place of Apple Application Support (written in the
-   registry).
-
-How to build
-------------
-You need Microsoft Visual C++ 2010 and foobar2000 SDK 1.1 or later to
-build foo_input_caf.
+MPEG audio, AAC, and ALAC are decoded through foobar2000's builtin
+packet decoders. Decoder for IMA4:1 is implemented in foo_input_caf.

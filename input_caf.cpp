@@ -1,136 +1,43 @@
-#include <cstring>
-#include <vector>
-#include <memory>
-#include <stdint.h>
-#include "CAFDecoder.h"
-#include "CAFMetaData.h"
-#include "StreamReaderImpl.h"
-#include "../SDK/foobar2000.h"
+#define NOMINMAX
+#include "Decoder.h"
 #include "../helpers/helpers.h"
-#include "init.h"
-
-namespace {
-    const char *get_codec_name(uint32_t fcc)
-    {
-        switch (fcc) {
-        case FOURCC('.','m','p','1'):
-            return "MP1";
-        case FOURCC('.','m','p','2'):
-            return "MP2";
-        case FOURCC('.','m','p','3'):
-            return "MP3";
-        case FOURCC('Q','D','M','2'):
-            return "QDesign Music 2";
-        case FOURCC('Q','D','M','C'):
-            return "QDesign";
-        case FOURCC('Q','c','l','p'):
-            return "Qualcomm PureVoice";
-        case FOURCC('Q','c','l','q'):
-            return "Qualcomm QCELP";
-        case FOURCC('a','a','c',' '):
-            return "AAC";
-        case FOURCC('a','a','c','h'):
-            return "AAC";
-        case FOURCC('a','a','c','p'):
-            return "AAC";
-        case FOURCC('a','l','a','c'):
-            return "ALAC";
-        case FOURCC('a','l','a','w'):
-            return "A-Law";
-        case FOURCC('d','v','i','8'):
-            return "DVI";
-        case FOURCC('i','l','b','c'):
-            return "iLBC";
-        case FOURCC('i','m','a','4'):
-            return "IMA 4:1";
-        case FOURCC('l','p','c','m'):
-            return "PCM";
-        case FOURCC('m','s','\000','\002'):
-            return "MS ADPCM";
-        case FOURCC('m','s','\000','\021'):
-            return "DVI/IMA ADPCM";
-        case FOURCC('m','s','\000','1'):
-            return "MS GSM 6.10";
-        case FOURCC('p','a','a','c'):
-            return "AAC";
-        case FOURCC('s','a','m','r'):
-            return "AMR-NB";
-        case FOURCC('u','l','a','w'):
-            return "\xc2""\xb5""-Law";
-        }
-        return 0;
-    }
-    const char *channel_name(unsigned n)
-    {
-        const char *tab[] = {
-            "?","FL","FR","FC","LF","BL","BR","FLC","FRC","BC",
-            "SL","SR","TC","TFL","TFC","TFR","TBL","TBC","TBR"
-        };
-        return n <= 18 ? tab[n] : "?";
-    }
-    std::string describe_channels(uint32_t mask)
-    {
-        std::stringstream ss;
-        ss << util::bitcount(mask) << ":";
-        for (unsigned i = 0; i < 32; ++i)
-            if (mask & (1<<i))
-                ss << ' ' << channel_name(i + 1);
-        return ss.str();
-    }
-}
 
 class input_caf {
-    service_ptr_t<file> m_pfile;
-    std::shared_ptr<CAFDecoder> m_decoder;
-    dynamic_bitrate_helper m_vbr_helper;
-    std::vector<uint8_t> m_buffer;
-    uint32_t m_encoder_delay;
-    uint32_t m_pull_packets;
-    uint64_t m_current_frame;
-    uint32_t m_chanmask;
+    service_ptr_t<file>       m_pfile;
+    std::shared_ptr<CAFFile>  m_demuxer;
+    std::shared_ptr<IDecoder> m_decoder;
+    int64_t                   m_current_packet;
+    uint32_t                  m_start_skip;
+    uint32_t                  m_packets_per_chunk;
+    std::vector<uint8_t>      m_chunk_buffer;
+    dynamic_bitrate_helper    m_vbr_helper;
+    bool                      m_need_channel_remap;
 public:
-    void open(service_ptr_t<file> pfile, const char *path,
+    void open(service_ptr_t<file> file, const char *path,
               t_input_open_reason reason, abort_callback &abort)
     {
-        if (g_CoreAudioToolboxVersion.empty())
-            throw pfc::exception("CoreAudioToolbox.dll not found");
-        m_pfile = pfile;
+        m_pfile = file;
         input_open_file_helper(m_pfile, path, reason, abort);
         m_pfile->ensure_seekable();
+        m_demuxer = std::make_shared<CAFFile>(m_pfile, abort);
+        m_decoder = IDecoder::create_decoder(m_demuxer, abort);
     }
-    void get_info(file_info &pinfo, abort_callback &abort)
+    void get_info(file_info &info, abort_callback &abort)
     {
-        create_decoder();
-
-        std::shared_ptr<IStreamReader> reader(new StreamReaderImpl(m_pfile));
-        CAFMetaData meta(reader);
-        meta.getInfo(pinfo);
-
-        const AudioStreamBasicDescription &asbd = m_decoder->getInputFormat();
-        pinfo.set_length(m_decoder->getLength() / asbd.mSampleRate);
-        pinfo.info_set_bitrate(m_decoder->getBitrate());
-        pinfo.info_set_int("samplerate", asbd.mSampleRate);
-        pinfo.info_set("channels", describe_channels(m_chanmask).c_str());
-
-        int bitwidth = m_decoder->getBitsPerChannel();
-        if (bitwidth > 0)
-            pinfo.info_set_int("bitspersample", bitwidth);
-
-        pinfo.info_set("encoding",
-                       m_decoder->isLossless() ? "lossless" : "lossy");
-        const char *codec = get_codec_name(asbd.mFormatID);
-        if (codec)
-            pinfo.info_set("codec", codec);
-        if (asbd.mFormatID == FOURCC('a','a','c',' '))
-            pinfo.info_set("codec_profile", "LC");
-        else if (asbd.mFormatID == FOURCC('a','a','c','h'))
-            pinfo.info_set("codec_profile", "SBR");
-        else if (asbd.mFormatID == FOURCC('a','a','c','p'))
-            pinfo.info_set("codec_profile", "SBR+PS");
-        else if (asbd.mFormatID == FOURCC('.','m','p','3')) {
-            pinfo.info_set("codec_profile",
-                m_decoder->isCBR() ? "CBR" : "VBR");
+        m_demuxer->get_metadata(info);
+        auto asbd = m_demuxer->format().asbd;
+        info.set_length(m_demuxer->duration() / asbd.mSampleRate);
+        info.info_set_bitrate(m_demuxer->bitrate());
+        info.info_set_int("samplerate", asbd.mSampleRate);
+        uint32_t channel_mask = m_demuxer->format().channel_mask;
+        std::string channels;
+        if (channel_mask) {
+            channels = Helpers::describe_channels(channel_mask);
+            info.info_set("channels", channels.c_str());
+        } else {
+            info.info_set_int("channels", asbd.mChannelsPerFrame);
         }
+        m_decoder->get_info(info);
     }
     t_filestats get_file_stats(abort_callback &abort)
     {
@@ -138,53 +45,102 @@ public:
     }
     void decode_initialize(unsigned flags, abort_callback &abort)
     {
-        m_pfile->reopen(abort);
-        if (m_decoder.get())
-            m_decoder.reset();
-        create_decoder();
+        auto asbd           = m_demuxer->format().asbd;
+        m_current_packet    = 0;
+        m_start_skip        = m_demuxer->start_offset() + decoder_delay();
+        m_packets_per_chunk = 1;
+        if (asbd.mBytesPerPacket > 0) {
+            while (m_packets_per_chunk * asbd.mBytesPerPacket < 4096)
+                m_packets_per_chunk <<= 1;
+        }
+        m_vbr_helper.reset();
     }
     bool decode_run(audio_chunk &chunk, abort_callback &abort)
     {
-        const AudioStreamBasicDescription &asbd = m_decoder->getOutputFormat();
-        uint32_t fpp = m_decoder->getInputFormat().mFramesPerPacket;
-        uint32_t frame_offset_in_packet = m_current_frame % fpp;
-        uint32_t nframes = m_pull_packets * fpp - frame_offset_in_packet;
-
-        nframes = m_decoder->readSamples(&m_buffer[0], nframes);
-        if (!nframes)
+        if (m_current_packet >= m_demuxer->num_packets() + 1)
             return false;
-        if (asbd.mFormatFlags & kAudioFormatFlagIsFloat) {
-            chunk.set_data_floatingpoint_ex(&m_buffer[0],
-                                            nframes * asbd.mBytesPerFrame,
-                                            asbd.mSampleRate,
-                                            asbd.mChannelsPerFrame,
-                                            (asbd.mBitsPerChannel + 7) & ~7,
-                                            audio_chunk::FLAG_LITTLE_ENDIAN,
-                                            m_chanmask);
-        } else {
-            chunk.set_data_fixedpoint_signed(&m_buffer[0],
-                                             nframes * asbd.mBytesPerFrame,
-                                             asbd.mSampleRate,
-                                             asbd.mChannelsPerFrame,
-                                             (asbd.mBitsPerChannel + 7) & ~7,
-                                             m_chanmask);
+        int64_t pull_packet = m_current_packet;
+        if (m_current_packet == m_demuxer->num_packets()) {
+            /*
+             * If the end padding is shorter than the decoder delay,
+             * we already have fed all packets to the decoder but still
+             * we have to feed extra packet to pull the final delayed result.
+             * Due to overlap+add, samples might not be fully reconstructed
+             * anyway...
+             */
+            if (decoder_delay() <= m_demuxer->end_padding())
+                return false;
+            else
+                pull_packet = m_current_packet - 1;
         }
-        update_dynamic_vbr_info(m_current_frame, m_current_frame + nframes);
-        m_current_frame += nframes;
+        auto asbd = m_demuxer->format().asbd;
+        uint32_t fpp  = asbd.mFramesPerPacket;
+        uint32_t npackets = m_demuxer->read_packets(pull_packet,
+                                                    m_packets_per_chunk,
+                                                    &m_chunk_buffer, abort);
+        if (npackets == 0)
+            return false;
+        m_current_packet += npackets;
+        int64_t trim = std::max(m_current_packet * fpp - m_demuxer->duration()
+                                - m_demuxer->start_offset() - decoder_delay(),
+                                static_cast<int64_t>(0));
+        if (trim >= fpp * npackets)
+            return false;
+        m_decoder->decode(m_chunk_buffer.data(), m_chunk_buffer.size(),
+                          chunk, abort);
+        t_size nframes = chunk.get_sample_count();
+        unsigned nchannels = chunk.get_channels();
+        if (trim > 0) {
+            nframes = fpp * npackets - trim;
+            chunk.set_sample_count(nframes);
+        }
+        if (m_start_skip) {
+            if (m_start_skip >= nframes) {
+                m_start_skip -= nframes;
+                return decode_run(chunk, abort);
+            }
+            uint32_t rest = nframes - m_start_skip;
+            uint32_t bpf  = nchannels * sizeof(audio_sample);
+            audio_sample *bp = chunk.get_data();
+            std::memmove(bp, bp + m_start_skip * nchannels, rest * bpf);
+            chunk.set_sample_count(rest);
+            m_start_skip = 0;
+        }
+        update_dynamic_vbr_info(m_current_packet - npackets, m_current_packet);
         return true;
     }
     bool decode_run_raw(audio_chunk &chunk, mem_block_container &raw,
-                        abort_callback & p_abort)
+                        abort_callback &abort)
     {
         throw pfc::exception_not_implemented();
     }
     void decode_seek(double seconds, abort_callback &abort)
     {
-        const AudioStreamBasicDescription &asbd = m_decoder->getInputFormat();
-        int64_t frame = seconds * asbd.mSampleRate + .5;
-        m_decoder->seek(frame);
-        m_current_frame = m_encoder_delay + frame;
+        auto asbd = m_demuxer->format().asbd;
+        int64_t position = seconds * asbd.mSampleRate + .5;
+        m_decoder->reset_after_seek();
         m_vbr_helper.reset();
+
+        if (position >= m_demuxer->duration()) {
+            /* let next decode_run() finish */
+            m_current_packet = m_demuxer->num_packets() + 1;
+            return;
+        }
+        uint32_t fpp       = asbd.mFramesPerPacket;
+        uint32_t start_off = m_demuxer->start_offset();
+        int64_t  ipacket   = (position + start_off) / fpp;
+        uint32_t preroll   = m_decoder->get_max_frame_dependency();
+        int64_t  ppacket   = std::max(0LL, ipacket - preroll);
+        m_start_skip = position + start_off + decoder_delay() - ipacket * fpp;
+        audio_chunk_impl_t<pfc::alloc_standard> tmp_chunk;
+        if (!ipacket && m_decoder->get_max_frame_dependency())
+            m_decoder = IDecoder::create_decoder(m_demuxer, abort);
+        while (ppacket < ipacket) {
+            m_demuxer->read_packets(ppacket++, 1, &m_chunk_buffer, abort);
+            m_decoder->decode(m_chunk_buffer.data(), m_chunk_buffer.size(),
+                              tmp_chunk, abort);
+        }
+        m_current_packet = ipacket;
     }
     bool decode_can_seek()
     {
@@ -192,7 +148,7 @@ public:
     }
     bool decode_get_dynamic_info(file_info &info, double &ts_delta)
     {
-        if (m_decoder->isCBR())
+        if (m_demuxer->is_cbr())
             return false;
         return m_vbr_helper.on_update(info, ts_delta);
     }
@@ -206,10 +162,7 @@ public:
     }
     void retag(const file_info &info, abort_callback &abort)
     {
-        create_decoder();
-        CFDictionaryPtr dict;
-        meta_from_fb2k::convertToInfoDictionary(info, &dict);
-        m_decoder->setInfoDictionary(dict.get());
+        m_demuxer->set_metadata(info, abort);
     }
     static bool g_is_our_content_type(const char *content_type)
     {
@@ -223,49 +176,26 @@ public:
     {
     }
 private:
-    void create_decoder()
+    uint32_t decoder_delay()
     {
-        if (m_decoder.get())
-            return;
-        std::shared_ptr<IStreamReader> reader(new StreamReaderImpl(m_pfile));
-        std::shared_ptr<CAFDecoder> decoder(new CAFDecoder(reader));
-        m_decoder.swap(decoder);
-        initialize_buffer();
-
-        m_current_frame = m_encoder_delay = m_decoder->getEncoderDelay();
-        const AudioStreamBasicDescription &asbd = m_decoder->getInputFormat();
-        m_chanmask = m_decoder->getChannelMask();
-        if (!m_chanmask && asbd.mChannelsPerFrame <= 8) {
-            static const uint32_t tab[] = {
-                0x4, 0x3, 0x7, 0x33, 0x37, 0x3f, 0x13f, 0x63f
-            };
-            m_chanmask = tab[asbd.mChannelsPerFrame - 1];
+        switch (m_demuxer->format().asbd.mFormatID) {
+        case FOURCC('.','m','p','1'): return 240 + 1;
+        case FOURCC('.','m','p','2'): return 240 + 1;
+        case FOURCC('.','m','p','3'): return 528 + 1;
+        case FOURCC('a','a','c','h'): return (480 + 1) * 2;
+        case FOURCC('a','a','c','p'): return (480 + 1) * 2;
         }
-        m_vbr_helper.reset();
+        return 0;
     }
-    void initialize_buffer()
+    void update_dynamic_vbr_info(uint64_t pre_packet, uint64_t cur_packet)
     {
-        uint32_t fpp = m_decoder->getInputFormat().mFramesPerPacket;
-        uint32_t bpf = m_decoder->getOutputFormat().mBytesPerFrame;
-        uint32_t bytes_per_packet = fpp * bpf;
-        m_pull_packets = 1;
-        while (m_pull_packets * bytes_per_packet < 8192)
-            m_pull_packets <<= 1;
-        m_buffer.resize(m_pull_packets * bytes_per_packet);
-    }
-    void update_dynamic_vbr_info(uint64_t prev_frame, uint64_t current_frame)
-    {
-        if (m_decoder->isCBR())
+        if (m_demuxer->is_cbr() || cur_packet >= m_demuxer->num_packets())
             return;
-        const AudioStreamBasicDescription &asbd = m_decoder->getInputFormat();
-        uint64_t prev_packet = prev_frame / asbd.mFramesPerPacket;
-        uint64_t current_packet = current_frame / asbd.mFramesPerPacket;
-        if (current_packet <= prev_packet)
-            return;
-        uint64_t prev_off = m_decoder->getByteOffset(prev_packet);
-        uint64_t cur_off = m_decoder->getByteOffset(current_packet);
-        uint64_t bytes = cur_off - prev_off;
-        double duration = (current_packet - prev_packet)
+        auto asbd = m_demuxer->format().asbd;
+        uint64_t pre_off = m_demuxer->packet_info(pre_packet);
+        uint64_t cur_off = m_demuxer->packet_info(cur_packet);
+        uint64_t bytes = cur_off - pre_off;
+        double duration = (cur_packet - pre_packet)
             * asbd.mFramesPerPacket / asbd.mSampleRate;
         m_vbr_helper.on_frame(duration, bytes << 3);
     }
