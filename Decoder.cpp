@@ -1,4 +1,7 @@
 #include <iterator>
+#define NOMINMAX
+#include <windows.h>
+#include <mmreg.h>
 #include "Decoder.h"
 #include "LPCMDecoder.h"
 #include "IMA4Decoder.h"
@@ -28,6 +31,21 @@ namespace {
             asbd.mChannelsPerFrame = nchannels;
             demuxer->update_format(asbd);
         }
+    }
+    void fill_waveformat(const AudioStreamBasicDescription &asbd,
+                         ADPCMWAVEFORMAT *wformat)
+    {
+        wformat->wfx.nChannels       = asbd.mChannelsPerFrame;
+        wformat->wfx.nSamplesPerSec  = asbd.mSampleRate + .5;
+        /* XXX
+         * ACM decoder sees nAvgBytesPerSec.
+         * it looks like floored value is expected
+         * (rounded value is rejected at least in the case of GSM 6.10
+         */
+        wformat->wfx.nAvgBytesPerSec = asbd.mBytesPerPacket * asbd.mSampleRate
+                                     / asbd.mFramesPerPacket; // + .5;
+        wformat->wfx.nBlockAlign     = asbd.mBytesPerPacket;
+        wformat->wSamplesPerBlock    = asbd.mFramesPerPacket;
     }
 }
 
@@ -68,6 +86,64 @@ IDecoder::create_decoder(std::shared_ptr<CAFFile> &demuxer,
             GUID owner = is_aac ? packet_decoder::owner_MP4
                                 : packet_decoder::owner_MP4_ALAC;
             decoder = MP(owner, 0x40, asc.data(), asc.size(), abort);
+            break;
+        }
+    case FOURCC('a','l','a','w'):
+    case FOURCC('u','l','a','w'):
+    case FOURCC('m','s','\0','\x02'):
+    case FOURCC('m','s','\0','\x11'):
+    case FOURCC('m','s','\0','1'):
+        {
+            std::vector<uint8_t> vec(sizeof(ADPCMWAVEFORMAT)+
+                                     sizeof(ADPCMCOEFSET)*7);
+            ADPCMWAVEFORMAT *wformat =
+                reinterpret_cast<ADPCMWAVEFORMAT *>(vec.data());
+            fill_waveformat(asbd, wformat);
+
+            switch (asbd.mFormatID) {
+            case FOURCC('a','l','a','w'):
+                wformat->wfx.wFormatTag     = 0x06;
+                wformat->wfx.wBitsPerSample = 8;
+                wformat->wfx.cbSize         = 0;
+                break;
+            case FOURCC('u','l','a','w'):
+                wformat->wfx.wFormatTag     = 0x07;
+                wformat->wfx.wBitsPerSample = 8;
+                wformat->wfx.cbSize         = 0;
+                break;
+            case FOURCC('m','s','\0','\x11'):
+                wformat->wfx.wFormatTag     = 0x11;
+                wformat->wfx.wBitsPerSample = 4;
+                wformat->wfx.cbSize         = 2;
+                break;
+            case FOURCC('m','s','\0','1'):
+                wformat->wfx.wFormatTag = 0x31;
+                wformat->wfx.cbSize     = 2;
+                break;
+            case FOURCC('m','s','\0','\x02'):
+                {
+                    wformat->wfx.wFormatTag     = 0x02;
+                    wformat->wfx.wBitsPerSample = 4;
+                    wformat->wfx.cbSize         = 32;
+                    wformat->wNumCoef           = 7;
+                    const short coef1[] = { 64, 128, 0, 48, 60, 115, 98 };
+                    const short coef2[] = { 0, -64, 0, 16, 0, -52, -58 };
+                    for (int i = 0; i < 7; ++i) {
+                        wformat->aCoef[i].iCoef1 = coef1[i] * 4;
+                        wformat->aCoef[i].iCoef2 = coef2[i] * 4;
+                    }
+                    break;
+                }
+            }
+            packet_decoder::matroska_setup setup = { 0 };
+            setup.codec_id           = "A_MS/ACM";
+            setup.sample_rate        = wformat->wfx.nSamplesPerSec;
+            setup.channels           = wformat->wfx.nChannels;
+            setup.codec_private      = wformat;
+            setup.codec_private_size =
+                sizeof(WAVEFORMATEX) + wformat->wfx.cbSize;
+            decoder = MP(packet_decoder::owner_matroska, 0, &setup,
+                         sizeof(setup), abort);
             break;
         }
     default:
