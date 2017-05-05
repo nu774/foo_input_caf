@@ -297,7 +297,7 @@ void CAFFile::parse_chan(Format *d, abort_callback &abort)
     switch (mChannelLayoutTag) {
     case kAudioChannelLayoutTag_UseChannelBitmap:
         d->channel_mask = mChannelBitmap;
-        if (Helpers::bitcount(mChannelBitmap != d->asbd.mChannelsPerFrame))
+        if (Helpers::bitcount(mChannelBitmap) != d->asbd.mChannelsPerFrame)
             throw std::runtime_error("invalid channel bitmap");
         break;
     case kAudioChannelLayoutTag_UseChannelDescriptions:
