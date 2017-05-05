@@ -28,7 +28,7 @@ namespace Helpers {
     inline const char *channel_name(unsigned n)
     {
         const char *tab[] = {
-            "?","FL","FR","FC","LF","BL","BR","FLC","FRC","BC",
+            "?","FL","FR","FC","LFE","BL","BR","FLC","FRC","BC",
             "SL","SR","TC","TFL","TFC","TFR","TBL","TBC","TBR"
         };
         return n <= 18 ? tab[n] : "?";
