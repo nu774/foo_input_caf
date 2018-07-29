@@ -1,4 +1,5 @@
 #include <iterator>
+#include <winsock2.h>
 #define NOMINMAX
 #include <windows.h>
 #include <mmreg.h>

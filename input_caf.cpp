@@ -1,8 +1,9 @@
 #define NOMINMAX
+#include <algorithm>
 #include "Decoder.h"
 #include "../helpers/helpers.h"
 
-class input_caf {
+class input_caf : public input_stubs {
     service_ptr_t<file>       m_pfile;
     std::shared_ptr<CAFFile>  m_demuxer;
     std::shared_ptr<IDecoder> m_decoder;
@@ -132,7 +133,7 @@ public:
         uint32_t preroll   = m_decoder->get_max_frame_dependency();
         int64_t  ppacket   = std::max(0LL, ipacket - preroll);
         m_start_skip = position + start_off + decoder_delay() - ipacket * fpp;
-        audio_chunk_impl_t<pfc::alloc_standard> tmp_chunk;
+        audio_chunk_impl tmp_chunk;
         if (!ipacket && m_decoder->get_max_frame_dependency())
             m_decoder = IDecoder::create_decoder(m_demuxer, abort);
         while (ppacket < ipacket) {
@@ -164,6 +165,10 @@ public:
     {
         m_demuxer->set_metadata(info, abort);
     }
+    void remove_tags(abort_callback &abort)
+    {
+        m_demuxer->set_metadata(file_info_const_impl(), abort);
+    }
     static bool g_is_our_content_type(const char *content_type)
     {
         return false;
@@ -172,8 +177,11 @@ public:
     {
         return !_stricmp(ext, "caf");
     }
-    void set_logger(event_logger::ptr ptr)
-    {
+    static const char *g_get_name() { return "CAF Decoder"; }
+    static const GUID g_get_guid() {
+        // {9130A8E2-B6A3-4E5C-83E6-877C32EE0EF5}
+        static const GUID guid = { 0x9130a8e2, 0xb6a3, 0x4e5c,{ 0x83, 0xe6, 0x87, 0x7c, 0x32, 0xee, 0xe, 0xf5 } };
+        return guid;
     }
 private:
     uint32_t decoder_delay()
