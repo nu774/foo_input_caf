@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <utility>
+#include "../SDK/foobar2000-winver.h"
 #include "../SDK/foobar2000.h"
 
 namespace Metadata {

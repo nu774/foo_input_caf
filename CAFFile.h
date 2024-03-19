@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include "../SDK/foobar2000-winver.h"
 #include "../SDK/foobar2000.h"
 #include "CoreAudio/CoreAudioTypes.h"
 #include "Helpers.h"
