@@ -463,6 +463,10 @@ void CAFFile::parse_channel_layout_tag(Format *d, uint32_t tag)
         layout = "\x03\x01\x02\x09"; break;
     case kAudioChannelLayoutTag_AC3_3_1:
         layout = "\x01\x03\x02\x09"; break;
+    case kAudioChannelLayoutTag_WAVE_4_0_B:
+        layout = "\x01\x02\x05\x06"; break;
+    case kAudioChannelLayoutTag_Logic_4_0_C:
+        layout = "\x01\x02\x09\x03"; break;
     /* 4.1ch */
     case kAudioChannelLayoutTag_DVD_6:
         layout = "\x01\x02\x04\x0A\x0B"; break;
@@ -484,6 +488,8 @@ void CAFFile::parse_channel_layout_tag(Format *d, uint32_t tag)
         layout = "\x01\x03\x02\x0A\x0B"; break;
     case kAudioChannelLayoutTag_MPEG_5_0_D:
         layout = "\x03\x01\x02\x0A\x0B"; break;
+    case kAudioChannelLayoutTag_WAVE_5_0_B:
+        layout = "\x01\x02\x03\x05\x06"; break;
     /* 5.1ch */
     case kAudioChannelLayoutTag_MPEG_5_1_A:
         layout = "\x01\x02\x03\x04\x0A\x0B"; break;
@@ -493,6 +499,8 @@ void CAFFile::parse_channel_layout_tag(Format *d, uint32_t tag)
         layout = "\x01\x03\x02\x0A\x0B\x04"; break;
     case kAudioChannelLayoutTag_MPEG_5_1_D:
         layout = "\x03\x01\x02\x0A\x0B\x04"; break;
+    case kAudioChannelLayoutTag_WAVE_5_1_B:
+        layout = "\x01\x02\x03\x04\x05\x06"; break;
     /* 6ch */
     case kAudioChannelLayoutTag_Hexagonal:
     case kAudioChannelLayoutTag_AudioUnit_6_0:
@@ -507,6 +515,8 @@ void CAFFile::parse_channel_layout_tag(Format *d, uint32_t tag)
         layout = "\x03\x01\x02\x05\x06\x0C"; break;
     case kAudioChannelLayoutTag_DTS_6_0_C:
         layout = "\x03\x09\x01\x02\x05\x06"; break;
+    case kAudioChannelLayoutTag_Logic_6_0_B:
+        layout = "\x01\x02\x0A\x0B\x09\x03"; break;
     /* 6.1ch */
     case kAudioChannelLayoutTag_MPEG_6_1_A:
         layout = "\x01\x02\x03\x04\x0A\x0B\x09"; break;
@@ -526,6 +536,12 @@ void CAFFile::parse_channel_layout_tag(Format *d, uint32_t tag)
         layout = "\x03\x09\x01\x02\x05\x06\x04"; break;
     case kAudioChannelLayoutTag_DTS_6_1_D:
         layout = "\x03\x01\x02\x0A\x0B\x04\x09"; break;
+    case kAudioChannelLayoutTag_WAVE_6_1:
+        layout = "\x01\x02\x03\x04\x09\x0A\x0B"; break;
+    case kAudioChannelLayoutTag_Logic_6_1_B:
+        layout = "\x01\x02\x0A\x0B\x09\x03\x04"; break;
+    case kAudioChannelLayoutTag_Logic_6_1_D:
+        layout = "\x01\x03\x02\x0A\x09\x0B\x04"; break;
     /* 7ch */
     case kAudioChannelLayoutTag_AudioUnit_7_0:
         layout = "\x01\x02\x0A\x0B\x03\x05\x06"; break;
@@ -564,6 +580,10 @@ void CAFFile::parse_channel_layout_tag(Format *d, uint32_t tag)
         layout = "\x01\x03\x02\x0A\x0B\x04\x0C\x0E"; break;
     case kAudioChannelLayoutTag_DTS_7_1:
         layout = "\x07\x03\x08\x01\x02\x0A\x0B\x04"; break;
+    case kAudioChannelLayoutTag_WAVE_7_1:
+        layout = "\x01\x02\x03\x04\x05\x06\x0A\x0B"; break;
+    case kAudioChannelLayoutTag_Logic_7_1_B:
+        layout = "\x01\x02\x0A\x0B\x05\x06\x03\x04"; break;
     /* 8ch */
     case kAudioChannelLayoutTag_Octagonal:
         layout = "\x01\x02\x05\x06\x03\x09\x0A\x0B"; break;
