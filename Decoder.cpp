@@ -89,6 +89,19 @@ IDecoder::create_decoder(std::shared_ptr<CAFFile> &demuxer,
             decoder = MP(owner, 0x40, asc.data(), asc.size(), abort);
             break;
         }
+    case FOURCC('f','l','a','c'):
+        {
+            std::vector<uint8_t> cookie;
+            demuxer->get_magic_cookie(&cookie);
+            packet_decoder::matroska_setup setup = { 0 };
+            setup.codec_id           = "A_FLAC";
+            setup.sample_rate        = asbd.mSampleRate;
+            setup.channels           = asbd.mChannelsPerFrame;
+            setup.codec_private      = cookie.data();
+            setup.codec_private_size = cookie.size();
+            decoder = MP(packet_decoder::owner_matroska, 0, &setup, sizeof(setup), abort);
+            break;
+        }
     case FOURCC('a','l','a','w'):
     case FOURCC('u','l','a','w'):
     case FOURCC('m','s','\0','\x02'):

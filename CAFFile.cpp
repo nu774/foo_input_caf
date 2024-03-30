@@ -115,6 +115,16 @@ void CAFFile::get_magic_cookie(std::vector<uint8_t> *data) const
                           std::back_inserter(res));
             break;
         }
+    case FOURCC('f','l','a','c'):
+        {
+            if (m_magic_cookie.size() > 12 && std::memcmp(&m_magic_cookie[4], "dfLa", 4) == 0)
+            {
+                res.resize(4);
+                memcpy(res.data(), "fLaC", 4);
+                std::copy(m_magic_cookie.begin() + 12, m_magic_cookie.end(), std::back_inserter(res));
+            }
+            break;
+        }
     default:
         res = m_magic_cookie;
     }
