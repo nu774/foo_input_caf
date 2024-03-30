@@ -12,7 +12,8 @@ Supported codecs
 - MPEG audio (MP1, MP2, MP3)
 - AAC (LC, SBR, SBR+PS)
 - ALAC
+- FLAC
 - IMA4:1
 
-MPEG audio, AAC, and ALAC are decoded through foobar2000's builtin
+MPEG audio, AAC, ALAC, and FLAC are decoded through foobar2000's builtin
 packet decoders. Decoder for IMA4:1 is implemented in foo_input_caf.
