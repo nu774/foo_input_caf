@@ -25,7 +25,6 @@ public:
     }
     void get_info(file_info &info, abort_callback &abort)
     {
-        m_demuxer->get_metadata(info);
         auto asbd = m_demuxer->format().asbd;
         info.set_length(m_demuxer->duration() / asbd.mSampleRate);
         info.info_set_bitrate(m_demuxer->bitrate());
@@ -39,6 +38,7 @@ public:
             info.info_set_int("channels", asbd.mChannelsPerFrame);
         }
         m_decoder->get_info(info);
+        m_demuxer->get_metadata(info);
     }
     t_filestats get_file_stats(abort_callback &abort)
     {
