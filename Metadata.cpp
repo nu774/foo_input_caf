@@ -102,8 +102,11 @@ namespace {
 
     const char *known_keys[][2] = {
         { "ALBUM",                      "album"                         },
+        { "approximate duration in seconds",
+                                        "approximate duration in seconds" },
         { "ARTIST",                     "artist"                        },
         { "BPM",                        "tempo"                         },
+        { "channel layout",             "channel layout"                },
         { "COMMENT",                    "comments"                      },
         { "COMPOSER",                   "composer"                      },
         { "COPYRIGHT",                  "copyright"                     },
@@ -111,19 +114,16 @@ namespace {
         { "GENRE",                      "genre"                         },
         { "KEY SIGNATURE",              "key signature"                 },
         { "LYRICIST",                   "lyricist"                      },
+        { "nominal bitrate",            "nominal bitrate"               },
         { "RECORD DATE",                "recorded date"                 },
+        { "source bit depth",           "source bit depth"              },
+        { "source encoder",             "source encoder"                },
         { "SUBTITLE",                   "subtitle"                      },
         { "TEMPO",                      "tempo"                         },
         { "TIME SIGNATURE",             "time signature"                },
         { "TITLE",                      "title"                         },
-        { "WRITER",                     "lyricist"                      },
-        { "approximate duration in seconds",
-                                        "approximate duration in seconds" },
-        { "channel layout",             "channel layout"                },
-        { "nominal bitrate",            "nominal bitrate"               },
-        { "source bit depth",           "source bit depth"              },
-        { "source encoder",             "source encoder"                },
         { "tool",                       "encoding application"          },
+        { "WRITER",                     "lyricist"                      },
     };
 
     typedef std::pair<std::string, std::string> string_pair;
