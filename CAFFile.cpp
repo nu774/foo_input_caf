@@ -239,8 +239,13 @@ void CAFFile::parse(abort_callback &abort)
 
     for (;;) {
         t_filesize pos = m_pfile->get_position(abort);
-        if (pos >= m_pfile->get_size(abort))
+        int64_t remaining = m_pfile->get_size(abort) - pos;
+        if (remaining < 12) {
+            if (remaining > 0) {
+                FB2K_console_formatter() << remaining << " bytes junk at the end of the file";
+            }
             break;
+        }
         m_pfile->read_bendian_t(fcc,  abort);
         m_pfile->read_bendian_t(size, abort);
 
