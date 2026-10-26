@@ -249,6 +249,15 @@ void CAFFile::parse(abort_callback &abort)
         m_pfile->read_bendian_t(fcc,  abort);
         m_pfile->read_bendian_t(size, abort);
 
+        /* A truncated or misaligned final chunk would make seek() throw. */
+        bool data_to_eof = fcc == FOURCC('d','a','t','a') && size == -1;
+        if (!data_to_eof && (size < 0 || size > remaining - 12)) {
+            FB2K_console_formatter()
+                << "invalid chunk size at offset " << pos
+                << "; ignoring the rest of the file";
+            break;
+        }
+
         switch (fcc) {
         case FOURCC('d','e','s','c'):
             parse_desc(&m_primary_format, abort); break;
